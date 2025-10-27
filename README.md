@@ -39,6 +39,9 @@ PostGameReport/
 ├── app.R                      # Shiny web interface
 ├── run_app.R                  # App launcher
 ├── SHINY_APP_GUIDE.md         # Web app documentation
+├── prepare_deployment.R       # Deployment preparation script
+├── DEPLOYMENT_GUIDE.md        # Full deployment guide
+├── DEPLOY_QUICK_START.md      # Quick deployment (10 min)
 │
 ├── CORE SYSTEM
 ├── helper_functions.R         # Reusable aggregation & chart functions
@@ -72,6 +75,24 @@ The app will open in your browser with a simple point-and-click interface:
 - Download your PDF!
 
 **Perfect for coaches and non-technical users.** See [SHINY_APP_GUIDE.md](SHINY_APP_GUIDE.md) for details.
+
+### 🌍 Deploy to Web (Share with Anyone!)
+
+Publish your Shiny app online so anyone can access it:
+
+```r
+# 1. Prepare for deployment
+source("prepare_deployment.R")
+
+# 2. Deploy to shinyapps.io (free!)
+source("deploy_app.R")
+
+# 3. Share your URL with the team!
+```
+
+**Result:** `https://yourname.shinyapps.io/baylor-football-analytics/`
+
+Anyone with the URL can generate reports - no R installation needed! See [DEPLOY_QUICK_START.md](DEPLOY_QUICK_START.md) for step-by-step guide.
 
 ---
 
