@@ -21,6 +21,7 @@ Comprehensive football analytics system for generating post-game reports with ad
 - **Game Planning Insights**: Data-driven recommendations
 
 ### Automation & Efficiency
+- **Shiny Web App**: Point-and-click interface for non-technical users (NEW!)
 - **Data Caching**: Automatic caching to reduce API calls and improve speed
 - **Reusable Functions**: Modular code design for easy maintenance
 - **Batch Processing**: Generate multiple reports at once
@@ -32,19 +33,49 @@ Comprehensive football analytics system for generating post-game reports with ad
 ```
 PostGameReport/
 ├── BU_Post_2024.Rmd           # Main report template
+├── TSU.png                    # Custom team logo
+│
+├── WEB APP (NEW!)
+├── app.R                      # Shiny web interface
+├── run_app.R                  # App launcher
+├── SHINY_APP_GUIDE.md         # Web app documentation
+│
+├── CORE SYSTEM
 ├── helper_functions.R         # Reusable aggregation & chart functions
 ├── data_loader.R              # Data loading with caching
 ├── feature_analytics.R        # Advanced analytics features
 ├── generate_report.R          # Automated report generation
 ├── report_config.yaml         # Configuration file
-├── example_usage.R            # Usage examples
+│
+├── DOCUMENTATION
 ├── README.md                  # This file
-├── cache/                     # Data cache directory (auto-created)
-├── reports/                   # Output directory (auto-created)
-└── TSU.png                    # Custom team logo
+├── QUICKSTART.md              # 5-minute guide
+├── example_usage.R            # Code examples
+│
+└── OUTPUT (auto-created)
+    ├── cache/                 # Data cache directory
+    └── reports/               # PDF reports
 ```
 
-## 🚀 Quick Start
+## 🌐 NEW: Web App Interface (Easiest!)
+
+**The easiest way to generate reports - no coding required!**
+
+```r
+# Launch the Shiny web app
+source("run_app.R")
+```
+
+The app will open in your browser with a simple point-and-click interface:
+- Select week and opponents from dropdowns
+- Click "Generate Report" button
+- Download your PDF!
+
+**Perfect for coaches and non-technical users.** See [SHINY_APP_GUIDE.md](SHINY_APP_GUIDE.md) for details.
+
+---
+
+## 🚀 Quick Start (Command Line)
 
 ### 1. Generate a Single Report
 
