@@ -1,0 +1,1254 @@
+---
+title: "Baylor vs SUM postgame Report"
+subtitle: "41-38 victory over SMU"
+author: "Applied Performance Football Analytics"
+knit: pagedown::chrome_print
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, ft.align = "left", fig.width = 12, fig.height = 7)
+```
+
+```{r, include = FALSE}
+### NOTE: If something is commented in all-caps, that means that it needs to be adjusted for the specific game/week. Everything else should stay the same for the most part.
+```
+
+```{r, include=FALSE}
+# import packages
+
+library(dplyr)
+library(tidyr)
+library(flextable)
+library(pagedown)
+library(scales)
+library(officer)
+library(cfbfastR)
+library(ggplot2)
+library(cowplot)
+library(magick)
+library(ggimage)
+library(tidyverse)
+library(ggdark)
+library(janitor)
+library(grid)
+library(png)
+```
+
+```{r, include=FALSE}
+######################## Load Data###########################
+
+###  Import all of cfbfastr pbp data for the 2025 season
+data_orig <- load_cfb_pbp(seasons = 2025, epa_wpa = TRUE)
+
+### Load Team Info Data
+
+# load team info data
+team_info = cfbd_team_info()
+
+ # Create table so you can easily join logos to schools
+team_info_logo_join = team_info %>% 
+  select(school, logo)
+
+# Create table so you can easily join conferences to schools
+team_info_conf_join = team_info %>% 
+  select(school, conference)
+
+
+```
+
+```{r, include = FALSE, message=FALSE}
+
+########## Clean play-by-play data #########
+
+# create new df
+data = data_orig %>% 
+  
+  # create time remaining in game row
+  mutate(game_mins_rem = ifelse(half == 1, (TimeSecsRem + 1800)/60, TimeSecsRem/60)) %>% 
+  
+  # Flores's name is displayed in multiple ways, change it
+  #mutate(receiver_player_name = ifelse(receiver_player_name == 'Rico Flores', 'Rico Flores Jr.',
+  #                                     receiver_player_name)) %>%
+  
+  # filter out special teams, end of period/half, timeouts,
+  # and penalties that resulted in no play
+  filter(!kickoff_play & !punt_play &
+           is.na(fg_kicker_player_name) &
+           !play_type %in% c('End Period', 'End of Half', 'Timeout',
+                             'End of 4th Quarter', 'End of Game') &
+           !orig_play_type == 'Penalty' # penalty, no play
+           ) %>%
+  #filter by penalty
+  filter((!penalty_flag) | # no penalty
+           (penalty_flag & penalty_declined) | # penalty, but penalty declined
+           (penalty_flag & !penalty_no_play)) %>%  # penalty, but a play still happens
+  
+  # run/pass column
+  mutate(r_p = ifelse(rush, 'Run',
+                      ifelse(pass, 'Pass', NA))) %>%
+  
+  # offense yards column
+  # ***** This column will be mainly used for calculating offensive yardages
+  mutate(off_yds = ifelse(!is.na(yds_rushed), yds_rushed,
+                   ifelse(!is.na(completion_yds), completion_yds, 
+                   ifelse(!is.na(yds_sacked), yds_sacked, 0)))) %>%
+  
+  # total yards (offense+penalty)
+  mutate(tot_yds = ifelse(!is.na(yds_penalty), off_yds + yds_penalty, off_yds)) %>%
+  
+  
+  # whether or not a play generated a first down by yards
+  mutate(first_down = ifelse((tot_yds >= distance), 1, 0)) %>%
+  
+  # whether or not offense scored a td
+  mutate(off_td = ifelse((rush_td | pass_td), 1, 0))
+
+# get rid of knees and weird plays
+data = data %>% 
+  filter(substr(play_text,1,4) != '[NH]',
+         play_text != 'TEAM pass incomplete',
+         substr(play_text,1,5) != 'Kneel')
+
+```
+
+```{r, include=FALSE, message=FALSE}
+
+###################### WEEKLY AND OPPONENT DATA, CHANGE NAMES AND ABR BELOW FOR EACH WEEK##############################
+#### Weekly Changes
+
+# opponent from this week, make sure it matches what opponent's name is in cfbfastr
+opp_name = "SMU"
+# abbreviation, just for purpose of putting it in graphs
+opp_abr = "SMU"
+
+# opponent for the following week
+next_name = "Samford"
+next_abr = "Samford"
+
+############### DONT HAVE TO CHANGE ANYTHING BELOW ##############################
+
+### Get team colors and logos
+
+# BU Blue
+bu_color <- team_info$color[team_info$school == "Baylor"]
+
+# BU Gold
+bu_alt_color <- team_info$alt_color[team_info$school == "Baylor"]
+
+# Opponent Main Color
+opp_color <- team_info$color[team_info$school == opp_name]
+
+# Opponent Alt Color
+opp_alt_color <- team_info$alt_color[team_info$school == opp_name]
+
+# Next Opponent Main Color
+next_color <- team_info$color[team_info$school == next_name]
+
+# Next Opponent Alt Color
+next_alt_color <- team_info$alt_color[team_info$school == next_name]
+
+# BU Logo
+bu_logo <- image_read(team_info$logo[team_info$school == "Baylor"])
+
+# Opponent Logo
+opp_logo <- image_read(team_info$logo[team_info$school == opp_name])
+#opp_logo <- image_read("TSU.png")
+
+# Next Opponent Logo
+next_logo <- image_read(team_info$logo[team_info$school == next_name])
+
+```
+
+```{r, include = FALSE}
+
+####################### Organize General Season Data############################
+######################### Organize Baylor Season data###########################
+
+# all
+bu_data = data %>% 
+  filter(pos_team == "Baylor" | def_pos_team == "Baylor",
+         !is.na(r_p))
+
+# offense
+bu_off_data = bu_data %>% 
+  filter(pos_team == "Baylor")
+
+# defense
+bu_def_data = bu_data %>% 
+  filter(def_pos_team == "Baylor")
+
+
+######################## Data from this Week's BU game vs opp_name##########################
+
+# all
+current_game_data = bu_data %>% 
+  filter(pos_team == opp_name | def_pos_team == opp_name)
+
+# offense
+current_game_off_data  = current_game_data %>% 
+  filter(pos_team == "Baylor")
+
+# defense
+current_game_def_data = current_game_data %>% 
+  filter(def_pos_team == "Baylor")
+
+############### Next Week's Opponent's Season Data#########################
+
+# all
+next_season_data = data %>%
+  filter(pos_team == next_name | def_pos_team == next_name)
+
+# offense
+next_season_off_data = next_season_data %>%
+  filter(pos_team == next_name)
+
+# defense
+next_season_def_data = next_season_data %>%
+  filter(def_pos_team == next_name)
+
+############################ Current Week Opponent's Season Data##############################
+
+# all
+opp_season_data = data %>%
+  filter(pos_team == opp_name | def_pos_team == opp_name)
+
+# offense
+opp_season_off_data = opp_season_data %>%
+  filter(pos_team == opp_name)
+
+# defense
+opp_season_def_data = opp_season_data %>%
+  filter(def_pos_team == opp_name)
+
+```
+
+```{r, include = FALSE}
+
+#### By Game Data Organized
+### BU Offense Data aggregated by Game
+bu_off_agg_game = bu_off_data %>% 
+  
+  # filter out NAs
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>% 
+  
+  # group by opponent
+  group_by(def_pos_team) %>% 
+  
+  # aggregate statistics at the game level
+  summarize(avg_pass_epa = mean(EPA[r_p == 'Pass']),
+            avg_run_epa = mean(EPA[r_p == 'Run']),
+            success_rate_pass = mean(success[r_p == 'Pass']),
+            success_rate_run = mean(success[r_p == 'Run'])) %>% 
+                    ########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+  
+  # rename def_pos_team so we can join logos
+  rename(school = def_pos_team)
+
+# join logos
+bu_off_agg_game = left_join(bu_off_agg_game, team_info_logo_join)
+
+# add the TSU logo (not in package)
+bu_off_agg_game = bu_off_agg_game %>% 
+  mutate(logo = ifelse(is.na(logo), 'TSU.png', logo)) %>% 
+
+# change school column to opponent
+  rename(opponent = school)
+
+### BU Defense Data aggregated by Game
+
+bu_def_agg_game = bu_def_data %>% 
+  
+  # filter out NAs
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>% 
+  
+  # group by opponent
+  group_by(pos_team) %>% 
+  
+  # aggregate statistics at the game level
+  summarize(avg_pass_epa_allowed = mean(EPA[r_p == 'Pass']),
+            avg_run_epa_allowed = mean(EPA[r_p == 'Run']),
+            success_rate_allowed_pass = mean(success[r_p == 'Pass']),
+            success_rate_allowed_run = mean(success[r_p == 'Run'])) %>% 
+                        ########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+  
+  # rename off_pos_team so we can join logos
+  rename(school = pos_team)
+
+# join logos
+bu_def_agg_game = left_join(bu_def_agg_game, team_info_logo_join)
+
+# add the TSU logo (not in package)
+bu_def_agg_game = bu_def_agg_game %>% 
+  mutate(logo = ifelse(is.na(logo), 'TSU.png', logo)) %>% 
+
+# change school column to opponent
+  rename(opponent = school)
+
+
+### Create Next Opp Off data table aggregated by game
+
+next_off_agg_game = next_season_off_data %>% 
+  
+  # filter out NAs
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(!is.na(r_p)) %>% 
+  
+  # group by opponent
+  group_by(week) %>% 
+  
+  # aggregate statistics at the game level
+  summarize(school = max(def_pos_team),
+            avg_pass_epa = mean(EPA[r_p == 'Pass']),
+            avg_run_epa = mean(EPA[r_p == 'Run']),
+            success_rate_pass = mean(success[r_p == 'Pass']),
+            success_rate_run = mean(success[r_p == 'Run'])) 
+# join logos
+next_off_agg_game = left_join(next_off_agg_game, team_info_logo_join) 
+
+
+############################# CHANGE EACH WEEK IF YOU USE A LOGO FROM THIS, CHAR SOU LOGO WAS FOR CLEMSON
+
+# add the Charleston Southern logo (not in package)
+next_off_agg_game = next_off_agg_game %>% 
+#  mutate(logo = ifelse(is.na(logo), 'char_sou_logo.png', logo)) %>%
+
+# change school column to opponent
+  rename(opponent = school)
+
+### Create Next Opp Def data table aggregated by game
+
+next_def_agg_game = next_season_def_data %>%  
+  
+  # filter out NAs
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>% 
+  filter(!is.na(r_p)) %>% 
+  
+  # group by opponent
+  group_by(week) %>% 
+  
+  # aggregate statistics at the game level
+  summarize(school = max(pos_team),
+            avg_pass_epa_allowed = mean(EPA[r_p == 'Pass']),
+            avg_run_epa_allowed = mean(EPA[r_p == 'Run']),
+            success_rate_allowed_pass = mean(success[r_p == 'Pass']),
+            success_rate_allowed_run = mean(success[r_p == 'Run'])) 
+  
+# join logos
+next_def_agg_game = left_join(next_def_agg_game, team_info_logo_join)
+
+    ############################# CHANGE EACH WEEK IF YOU USE A LOGO FROM THIS, CHAR SOU LOGO WAS FOR CLEMSON
+
+# add the TSU logo (not in package)
+#next_def_agg_game = next_def_agg_game %>% 
+#  mutate(logo = ifelse(is.na(logo), 'char_sou_logo.png', logo)) %>% 
+
+# change school column to opponent
+#  rename(opponent = school)
+
+```
+
+```{r, include=FALSE}
+
+#### By Play Data Organized
+
+### Organize Power 4 Data
+
+power_four_conferences = c('SEC', 'Big 12','Big Ten', 'ACC', 'Notre Dame')
+
+## P4 Offense data by play (in general, average of each play for all P4 teams)
+
+power_four_off_agg = data %>% 
+  rename(school = pos_team)
+
+power_four_off_agg = left_join(power_four_off_agg, team_info_conf_join, by = c('school'))
+
+power_four_off_agg = power_four_off_agg %>% 
+  filter(conference %in% power_four_conferences) %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = 'Power 4') %>% 
+  group_by(grouping) %>% 
+  summarise(avg_pass_epa = mean(EPA[r_p == 'Pass']),
+            avg_run_epa = mean(EPA[r_p == 'Run']),
+            success_rate_pass = mean(success[r_p == 'Pass']),
+            success_rate_run = mean(success[r_p == 'Run']))
+
+########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+
+
+## P4 Defense data by play (in general, average of each play for all P5 teams)
+power_four_def_agg = data %>% 
+  rename(school = def_pos_team)
+
+power_four_def_agg = left_join(power_four_def_agg, team_info_conf_join, by = c('school'))
+
+power_four_def_agg = power_four_def_agg %>% 
+  filter(conference %in% power_four_conferences) %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = 'Power 4') %>% 
+  group_by(grouping) %>%  
+  summarise(avg_pass_epa_allowed = mean(EPA[r_p == 'Pass']),
+            avg_run_epa_allowed = mean(EPA[r_p == 'Run']),
+            success_rate_allowed_pass = mean(success[r_p == 'Pass']),
+            success_rate_allowed_run = mean(success[r_p == 'Run']))
+
+########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+
+### BU Season Data by play
+
+## BU Season Off by play
+
+bu_season_off_agg = bu_off_data %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = 'BU Season') %>% 
+  group_by(grouping) %>%
+  summarise(avg_pass_epa = mean(EPA[r_p == 'Pass']),
+            avg_run_epa = mean(EPA[r_p == 'Run']),
+            success_rate_pass = mean(success[r_p == 'Pass']),
+            success_rate_run = mean(success[r_p == 'Run']))
+
+########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+
+## BU Season Def by play
+
+bu_season_def_agg = bu_def_data %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = 'BU Season') %>%
+  group_by(grouping) %>%
+  summarise(avg_pass_epa_allowed = mean(EPA[r_p == 'Pass']),
+            avg_run_epa_allowed = mean(EPA[r_p == 'Run']),
+            success_rate_allowed_pass = mean(success[r_p == 'Pass']),
+            success_rate_allowed_run = mean(success[r_p == 'Run']))
+
+########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+
+## This Week's BU OFFENSIVE Performance by Play
+
+## Current Game OFFENSE
+
+current_game_off_agg = current_game_off_data %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = paste('BU vs ', opp_name, sep = "")) %>%
+  group_by(grouping) %>%
+  summarise(avg_pass_epa = mean(EPA[r_p == 'Pass']),
+            avg_run_epa = mean(EPA[r_p == 'Run']),
+            success_rate_pass = mean(success[r_p == 'Pass']),
+            success_rate_run = mean(success[r_p == 'Run']))
+                      ########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+
+## This Week's DEF performance by play
+
+current_game_def_agg = current_game_def_data %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = paste('BU vs ', opp_name, sep = "")) %>%
+  group_by(grouping) %>%
+  summarise(avg_pass_epa_allowed = mean(EPA[r_p == 'Pass']),
+            avg_run_epa_allowed = mean(EPA[r_p == 'Run']),
+            success_rate_allowed_pass = mean(success[r_p == 'Pass']),
+            success_rate_allowed_run = mean(success[r_p == 'Run']))
+                      ########################## CAN ADD MORE STATISTICS HERE IF NEEDED FOR A NEW CHART
+  
+
+### Create Combined dfs for P4, BU Season, and BU Game by play to compare
+
+combined_off_agg = rbind(current_game_off_agg, bu_season_off_agg, power_four_off_agg)
+
+combined_def_agg = rbind(current_game_def_agg, bu_season_def_agg, power_four_def_agg)
+
+```
+
+```{r, results='hide', warning=FALSE, message=FALSE}
+
+#### By Down Data Organized
+
+### P4 Offense by Down
+
+power_four_off_down_agg = data %>% 
+  rename(school = pos_team)
+
+power_four_off_down_agg = left_join(power_four_off_down_agg, team_info_conf_join, by = c('school'))
+
+power_four_off_down_agg = power_four_off_down_agg %>% 
+  filter(conference %in% power_four_conferences) %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = 'Power 4') %>% 
+  group_by(grouping) %>% 
+  summarise(avg_1st_pass_epa = mean(EPA[r_p == 'Pass' & down == 1]),
+            avg_1st_run_epa = mean(EPA[r_p == 'Run' & down == 1]),
+            avg_2nd_pass_epa = mean(EPA[r_p == 'Pass' & down == 2]),
+            avg_2nd_run_epa = mean(EPA[r_p == 'Run' & down == 2]),
+            avg_3rd_pass_epa = mean(EPA[r_p == 'Pass' & down == 3]),
+            avg_3rd_run_epa = mean(EPA[r_p == 'Run' & down == 3]),
+            avg_4th_pass_epa = mean(EPA[r_p == 'Pass' & down == 4]),
+            avg_4th_run_epa = mean(EPA[r_p == 'Run' & down == 4]))
+
+
+#### P4 Defense by Down
+
+power_four_def_down_agg = data %>% 
+  rename(school = def_pos_team)
+
+power_four_def_down_agg = left_join(power_four_def_down_agg, team_info_conf_join, by = c('school'))
+
+power_four_def_down_agg = power_four_def_down_agg %>% 
+  filter(conference %in% power_four_conferences) %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = 'Power 4') %>% 
+  group_by(grouping) %>%  
+  summarise(avg_1st_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 1]),
+            avg_1st_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 1]),
+            avg_2nd_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 2]),
+            avg_2nd_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 2]),
+            avg_3rd_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 3]),
+            avg_3rd_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 3]),
+            avg_4th_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 4]),
+            avg_4th_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 4]))
+
+
+#### Next Opp OFF by Down
+
+next_season_off_agg = next_season_off_data %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = paste(next_name, 'Season')) %>% 
+  group_by(grouping) %>%
+  summarise(avg_1st_pass_epa = mean(EPA[r_p == 'Pass' & down == 1]),
+            avg_1st_run_epa = mean(EPA[r_p == 'Run' & down == 1]),
+            avg_2nd_pass_epa = mean(EPA[r_p == 'Pass' & down == 2]),
+            avg_2nd_run_epa = mean(EPA[r_p == 'Run' & down == 2]),
+            avg_3rd_pass_epa = mean(EPA[r_p == 'Pass' & down == 3]),
+            avg_3rd_run_epa = mean(EPA[r_p == 'Run' & down == 3]),
+            avg_4th_pass_epa = mean(EPA[r_p == 'Pass' & down == 4]),
+            avg_4th_run_epa = mean(EPA[r_p == 'Run' & down == 4])
+            )
+
+
+#### Next Opp DEF by down
+
+next_season_def_agg = next_season_def_data %>% 
+  filter(!is.na(EPA)) %>% 
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>% 
+  mutate(grouping = paste(next_name, 'Season')) %>%
+  group_by(grouping) %>%
+  summarise(avg_1st_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 1]),
+            avg_1st_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 1]),
+            avg_2nd_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 2]),
+            avg_2nd_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 2]),
+            avg_3rd_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 3]),
+            avg_3rd_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 3]),
+            avg_4th_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 4]),
+            avg_4th_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 4])
+            )
+
+### Combine Next Opp and P4 dfs by down into one for comparison graph later
+
+# OFFENSE
+next_combined_off_agg = rbind(next_season_off_agg, power_four_off_down_agg)
+
+# DEFENSE
+next_combined_def_agg = rbind(next_season_def_agg, power_four_def_down_agg)
+
+```
+
+```{r, echo=FALSE, fig.align='center', warning = FALSE}
+
+# # print BU logo
+# # Resize the BU logo as needed
+# bu_logo <- image_read(team_info$logo[team_info$school == "Baylor"]) %>%
+#   image_scale("50%")  # Adjust the dimensions as needed
+# #opp_logo <- image_read(team_info$logo[team_info$school == opp_name]) %>%
+# #  image_scale("50%")  # Resize opponent's logo to match Baylor's logo size
+# 
+# # Create a grid layout for Baylor and opponent logos
+# grid.newpage()
+# pushViewport(viewport(layout = grid.layout(1, 2, widths = c(1, 1))))  # Two columns of equal width
+# 
+# # Print Baylor logo on the left
+# grid.raster(bu_logo, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+# 
+# # Print Opponent logo on the right
+# grid.raster(opp_logo, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+
+
+# print BU logo
+# Resize the BU logo as needed
+
+bu_logo <- image_read(team_info$logo[team_info$school == "Baylor"]) %>%
+  image_resize("150x150")  # Adjust the dimensions as needed
+print(bu_logo, info = FALSE)
+
+```
+
+<br> <br>
+
+#### The following is a football analytics report of the Baylor vs Kansas Game.
+
+#### Some Football Analytics terms should be understood before viewing. They are described below:
+
+<br>
+
+**EPA (Expected Points Added)** is a measure of offensive efficiency and explosiveness. Before each play, a model predicts the expected Points (EP1) that a team will score on a drive based on down, distance, field position, etc. After the play occurs, a new Expected Points value (EP2) is calculated before the following play. The difference between these Expected Points values is the EPA for the original play (EPA = EP2 - EP1).
+
+For example, let's say that a model projects Baylor to score **2 points** on their current drive based on their field position and other factors. If B. Washington rushes for 10 yards, the projection may increase to **2.5 points**. Here, the EPA from the rush would be **+0.5** (2.5 - 2).
+
+Essentially, this statistic measures how well a team or certain player performs on a given play.
+
+**EPA Allowed** is a measure of defensive efficiency. This metric measures the opposing offense's EPA on each play. As a result, a defense with a low EPA Allowed per play is efficient.
+
+<br>
+
+Data Source: cfbfastR
+
+\pagebreak
+
+## *Win Probability*
+
+```{r, results='hide', warning=FALSE, message=FALSE}
+
+# Game Win Probability chart
+# Select Baylor vs Opponent
+win_plot_data <- current_game_data %>% 
+  filter(!is.na(away_wp_before) & !is.na(home_wp_before))
+
+background_data <- data.frame(xmin = -Inf, xmax = Inf,
+                              ymin = c(-Inf, .5),
+                              ymax = c(.5, Inf),
+                              fill = as.factor(c("low",
+                                            "high")))                                   # start setting background colors
+
+# Generate plot
+win_plot_data %>%
+  
+  dplyr::select(game_mins_rem,                                                          # Use game seconds remaining
+ 
+########################### CHANGE WP BEFORE IF BU HOME OR AWAY##########################
+                away_wp_before) %>%                                                     # Use away win probability
+  
+  gather(team, wpa,-game_mins_rem) %>% # Melt data
+  ggplot(aes(x = game_mins_rem, y = wpa, color = team)) +                               # Set aesthetics
+  geom_rect(data = background_data, 
+            aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax, fill = fill),       #set background colors
+            inherit.aes = FALSE, alpha = 0.5, colour = bu_alt_color) +
+  scale_fill_manual(values = alpha(c(bu_alt_color, opp_color), 0.2)) +                  # set background colors
+  #geom_line(size = 1, color = "black") +                                               # Set geom line
+  geom_smooth(size = 1, color = "black", se = FALSE, method = "loess", span = 0.15) +   # Set geom line
+  geom_hline(yintercept = 0.5, color = "grey", linetype = "dashed") +                   # Set horizontal line
+  
+      ################################################################# ADJUST LOGOS AS NEEDED  
+  draw_image(bu_logo,x = -61, y = -.12, width = 6.67, height = 2) +
+  draw_image(opp_logo,x = -61, y = -.87, width = 6.67, height = 2) +
+  
+   ########################################################### CHANGE WP BEFORE IF BU HOME OR AWAY
+  scale_color_manual(labels = c("home_wp_before" = "BU"),                             # Set colors manually
+                     values = c("home_wp_before" = "black"),
+                     guide = FALSE) +
+  scale_x_reverse(breaks = seq(0, 60, 5)) +                                           # Flip cords to count down time
+  annotate("text", x = 55, y = .95, label = "", color = "black", size = 8) +          # Add team labels
+  annotate("text", x = 55, y = .05, label = "", color = "black", size = 8) +          # Add team labels
+  geom_vline(xintercept = 45, linetype = "dashed", color = "black") +                 # Add quarter lines
+  geom_vline(xintercept = 30, linetype = "dashed", color = "black") + 
+  geom_vline(xintercept = 15, linetype = "dashed", color = "black") + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") + 
+  guides(fill = "none") +                                                             # get rid of legend for background
+  labs(x = "Time Remaining (minutes)",                                                # Add labels
+    y = "Win Probability",
+    title = paste('Baylor vs', opp_name, 'Win Probability Chart'),
+    subtitle = 'Chances of winning at each point in the game') + 
+  theme(plot.title = element_text(size = 14, hjust = 0, face = "bold"))                # Set theme
+
+```
+
+NOTE: This chart assumes each team has an equal chance to win the game at the start.
+
+<br>
+
+**ANALYSIS:**
+
+Baylor started slow in the first quarter, but quickly gained momentum in the second quarter. The Bears maintained a lead throughout the game, with a win probability of over 50% for the majority of the game. The win probability chart shows Baylor's dominance over Kansas, with the Bears having a high chance of winning the game.
+
+\pagebreak
+
+## *OFFENSE*
+
+```{r, warning=FALSE}
+
+# Offensive EPA by Game
+
+bu_off_agg_game %>% 
+  ggplot(aes(x = avg_pass_epa, y = avg_run_epa)) +
+  
+    # Add colored rectangles for quadrants
+  geom_rect(aes(xmin = -Inf, xmax = mean(bu_off_agg_game$avg_pass_epa), 
+                ymin = -Inf, ymax = mean(bu_off_agg_game$avg_run_epa)), 
+            fill = "lightpink", alpha = 0.2) +                                     # Weak Run, Weak Pass
+  geom_rect(aes(xmin = mean(bu_off_agg_game$avg_pass_epa), xmax = Inf, 
+                ymin = -Inf, ymax = mean(bu_off_agg_game$avg_run_epa)), 
+            fill = "#ffe385", alpha = 0.2) +                                       # Weak Run, Strong Pass
+  geom_rect(aes(xmin = -Inf, xmax = mean(bu_off_agg_game$avg_pass_epa), 
+                ymin = mean(bu_off_agg_game$avg_run_epa), ymax = Inf), 
+            fill = "#ffe385", alpha = 0.2) +                                       # Strong Run, Weak Pass
+  geom_rect(aes(xmin = mean(bu_off_agg_game$avg_pass_epa), xmax = Inf, 
+                ymin = mean(bu_off_agg_game$avg_run_epa), ymax = Inf), 
+            fill = "lightgreen", alpha = 0.2) +                                    # strong Run, Strong Pass
+  
+  geom_point(alpha = 0) +                                                           # scatter plot
+  geom_image(aes(image = logo), size = 0.05, asp = 16 / 9) +                       # Use geom_image to use logos
+
+  # customize background
+  theme(legend.position = "none",
+        panel.background = element_rect(fill = 'lightgray'),
+        panel.grid.major = element_line(color = 'white', size = .01),
+        panel.grid.minor = element_line(color = 'white', size = .01),
+        panel.border = element_blank(),
+        plot.title = element_text(size = 14, hjust = 0, face = "bold")) +
+  labs(x = "EPA per Pass", y = "EPA per Rush", # Set labels
+       title = "Baylor Offensive EPA per Play by Game",
+       subtitle = 'Baylor Offensive Performance vs Each Opponent') +
+
+  # average lines
+  geom_hline(yintercept = mean(bu_off_agg_game$avg_run_epa), 
+             linetype = 'dashed', size = .5, color = 'black') +
+  geom_vline(xintercept = mean(bu_off_agg_game$avg_pass_epa), 
+             linetype = 'dashed', size = .5, color = 'black') +
+
+  # set circle
+  annotate("path",
+   x = (as.numeric(bu_off_agg_game[bu_off_agg_game$opponent == opp_name,
+                'avg_pass_epa'])) + .05*cos(seq(0,2*pi,length.out = 100)),
+   y = (as.numeric(bu_off_agg_game[bu_off_agg_game$opponent == opp_name,
+                'avg_run_epa'])) + .05*sin(seq(0,2*pi,length.out = 100)),
+   color = 'darkred', size = 1) +
+  
+annotate("text", 
+  x = mean(bu_off_agg_game$avg_pass_epa) - .8, 
+  y = mean(bu_off_agg_game$avg_run_epa) + .1, 
+  label = "Strong Run
+Weak Pass", 
+  color = "black",
+  size = 3,
+  fontface = "plain",
+  hjust = 0, 
+  vjust = 1
+) +
+annotate("text", 
+  x = mean(bu_off_agg_game$avg_pass_epa) - .8, 
+  y = mean(bu_off_agg_game$avg_run_epa) - .1, 
+  label = "Weak Pass
+Weak Run", 
+  color = "black",
+  size = 3,
+  fontface = "plain",
+  hjust = 0, 
+  vjust = 0
+) +
+annotate("text", 
+  x = mean(bu_off_agg_game$avg_pass_epa) + 0.5, 
+  y = mean(bu_off_agg_game$avg_run_epa) + 0.1, 
+  label = "Strong Pass
+           Strong Run", 
+  color = "black",
+  size = 3,
+  fontface = "plain",
+  hjust = 1, 
+  vjust = 1
+) +
+annotate("text", 
+  x = mean(bu_off_agg_game$avg_pass_epa) + 0.5, 
+  y = mean(bu_off_agg_game$avg_run_epa) - 0.1, 
+  label = "Strong Pass 
+           Weak Run", 
+  color = "black",
+  size = 3,
+  fontface = "plain",
+  hjust = 1, 
+  vjust = 0
+)
+  
+```
+
+```{r, warning=FALSE}
+
+### Comparison Charts
+
+# Offense
+
+# pivot off data
+comp_chart_off = combined_off_agg[1:3] %>% 
+  pivot_longer(cols = 2:3,
+             names_to = 'statistic',
+             values_to = 'value')
+
+
+comp_chart_off %>% 
+  ggplot(aes(x = statistic, y = value, fill = grouping)) + 
+  geom_bar(position = "dodge", stat = "identity", width = .8) +
+  #Add data labels
+  geom_text(aes(label = round(value, 2),# Round to 2 decimal places
+                vjust = ifelse(value <= 0, 1.5, -1)),# Move vjust inside aes()
+            position = position_dodge(width = 0.8),# Align with bars
+            size = 4,#Adjust text size as needed
+            color = "black",
+            fontface = "italic"
+  ) +
+  # choose color scheme
+  scale_fill_manual(values = c(bu_alt_color, bu_color, "grey35")) +
+# format background
+  theme(legend.position = "bottom",
+        panel.background = element_rect(fil = 'lightgray'),
+        panel.grid.major = element_line(color = 'white', size = .01),
+        panel.grid.minor = element_line(color = 'white', size = .01),
+        panel.border = element_blank()) + 
+# adjust axis labels
+  labs(y = "EPA per play", x = "", 
+       subtitle = "EPA per play compared to Baylor season and Power Four teams",
+       title = 'Baylor Offensive EPA Comparison') +
+# adjust legend label
+  guides(fill = guide_legend(title = "Key")) +
+# adjust axis label spacing
+  theme(axis.title.x = element_text(margin = margin(t = 15)), 
+        axis.title.y = element_text(margin = margin(r = 15)),
+# adjust title positioning and size
+        plot.title = element_text(size = 14, hjust = 0, face = "bold")) +
+# x-axis
+  geom_hline(yintercept = 0, size = .5, color = 'black') +
+# x-axis labels
+  scale_x_discrete(labels = c('Pass', 'Run')) +
+# ylim
+  coord_cartesian(ylim = c(min(comp_chart_off$value) - .03, max(comp_chart_off$value) + .03))
+
+```
+
+\pagebreak
+
+<br>
+
+**Analysis:**
+
+Offensively, Baylor was able to move the ball effectively against Kansas. The EPA per play was higher than the season average for both passing and running plays. The EPA per play was also higher than the average of Power Four teams for running plays. This indicates that Baylor's offense was able to outperform the average Power Four team in terms of running plays. Baylor exhibited some the best offense of the season. Both the run and pass game were strong, with the pass game being the strongest it has been all season.
+
+<br>
+
+**Compared to Other Baylor Games**
+
+-   As shown in the scatter plot above, the EPA per rush and pass were some of the best all season.
+
+<br>
+
+**Compared to Baylor Season and Power Four**
+
+-   Compared to Power Four teams, Baylor's passing offense significantly out performed the Power Four teams, on average. Additionally, Baylor way over performed their season average.
+-   As for running plays, the EPA per play was higher than other Power Four offenses. This result, as it has been over the past five games, outperformed the P4 average.
+
+
+<br>
+
+**Conclusion**
+
+Overall, the Baylor offense had a strong performance against Kansas. The Bears were able to move the ball effectively through both the passing and running game.
+
+\pagebreak
+
+## *DEFENSE*
+
+```{r, warning=FALSE}
+
+# Defensive EPA Allowed by Game Graph
+
+# bu_def_agg_game %>%
+#   ggplot(aes(x = avg_pass_epa_allowed, y = avg_run_epa_allowed))+
+#   geom_point(alpha = 0)+
+#   scale_y_reverse()+
+#   scale_x_reverse()+
+#   geom_image(aes(image = logo), size = 0.05, asp = 16 / 9)+ # Use geom_image to use logos
+#    theme(legend.position="none", # Turn off legend
+#         panel.background = element_rect(fill = 'lightgray'),
+#         panel.grid.major = element_line(color = 'white', size = .01),
+#         panel.grid.minor = element_line(color = 'white', size = .01),
+#         panel.border = element_blank(), # Remove grid,
+#     aspect.ratio = 9 / 16,
+#     plot.title = element_text(size = 14, hjust = 0, face = "bold")) +  # Remove grid
+#     labs(x= "EPA Allowed per Pass", y ="EPA Allowed per Rush", # Set labels
+#        title = "Baylor Defensive EPA Allowed per Play by Game",
+#        subtitle = 'Baylor Defensive Performance vs Each Opponent') +
+#   geom_hline(yintercept = mean(bu_def_agg_game$avg_run_epa_allowed),
+#              linetype = 'dashed', size = .5, color = 'black')+
+#   geom_vline(xintercept = mean(bu_def_agg_game$avg_pass_epa_allowed),
+#              linetype = 'dashed', size = .5, color = 'black')+
+#   annotate("path",
+#            x=(as.numeric(bu_def_agg_game[bu_def_agg_game$opponent == opp_name,
+#                         'avg_pass_epa_allowed']))+.05*cos(seq(0,2*pi,length.out=100)),
+#            y=(as.numeric(bu_def_agg_game[bu_def_agg_game$opponent == opp_name,
+#                         'avg_run_epa_allowed']))+.05*sin(seq(0,2*pi,length.out=100)), color = 'darkred', size = .1) +
+# 
+#    # Annotate quadrants
+#   annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) - .5,
+#            y = mean(bu_def_agg_game$avg_run_epa_allowed) + .05,
+#            label = "Weak Run DEF
+# Strong Pass DEF",
+#            color = "darkorange", size = 3, fontface = "plain",
+#            hjust = 0, vjust = 1) +
+#   annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) - .5,
+#            y = mean(bu_def_agg_game$avg_run_epa_allowed) - .05,
+#            label = "Strong Run DEF
+# Strong Pass DEF",
+#            color = "red", size = 3, fontface = "plain",
+#            hjust = 0, vjust = 0) +
+#   annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) + 0.35,
+#            y = mean(bu_def_agg_game$avg_run_epa_allowed) + 0.1,
+#            label = "Weak Run DEF
+# Weak Pass DEF",
+#            color = "darkgreen", size = 3, fontface = "plain",
+#            hjust = 1, vjust = 1) +
+#   annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) + 0.25,
+#            y = mean(bu_def_agg_game$avg_run_epa_allowed) - 0.05,
+#            label = "Strong Run DEF
+# Weak Pass DEF",
+#            color = "darkorange", size = 3, fontface = "plain",
+#            hjust = 1, vjust = 0)
+  
+
+bu_def_agg_game %>% 
+  ggplot(aes(x = avg_pass_epa_allowed, y = avg_run_epa_allowed)) +
+  
+  # Add colored rectangles for quadrants
+  geom_rect(aes(xmin = -Inf, xmax = mean(bu_def_agg_game$avg_pass_epa_allowed), 
+                ymin = -Inf, ymax = mean(bu_def_agg_game$avg_run_epa_allowed)), 
+            fill = "lightgreen", alpha = 0.2) +  # Strong Run DEF, Strong Pass DEF
+  geom_rect(aes(xmin = mean(bu_def_agg_game$avg_pass_epa_allowed), xmax = Inf, 
+                ymin = -Inf, ymax = mean(bu_def_agg_game$avg_run_epa_allowed)), 
+            fill = "#FFE385", alpha = 0.2) +  # Strong Run DEF, Weak Pass DEF
+  geom_rect(aes(xmin = -Inf, xmax = mean(bu_def_agg_game$avg_pass_epa_allowed), 
+                ymin = mean(bu_def_agg_game$avg_run_epa_allowed), ymax = Inf), 
+            fill = "#FFE385", alpha = 0.2) +  # Weak Run DEF, Strong Pass DEF
+  geom_rect(aes(xmin = mean(bu_def_agg_game$avg_pass_epa_allowed), xmax = Inf, 
+                ymin = mean(bu_def_agg_game$avg_run_epa_allowed), ymax = Inf), 
+            fill = "lightpink", alpha = 0.2) +  # Weak Run DEF, Weak Pass DEF
+  
+  geom_point(alpha = 0) +
+  scale_y_reverse() +
+  scale_x_reverse() +
+  geom_image(aes(image = logo), size = 0.05, asp = 16 / 9) +
+  theme(legend.position = "none", 
+        panel.background = element_rect(fill = 'lightgray'),
+        panel.grid.major = element_line(color = 'white', size = .01),
+        panel.grid.minor = element_line(color = 'white', size = .01),
+        panel.border = element_blank(),
+        aspect.ratio = 9 / 16,
+        plot.title = element_text(size = 14, hjust = 0, face = "bold")) +
+  labs(x = "EPA Allowed per Pass", y = "EPA Allowed per Rush", 
+       title = "Baylor Defensive EPA Allowed per Play by Game",
+       subtitle = 'Baylor Defensive Performance vs Each Opponent') +
+  geom_hline(yintercept = mean(bu_def_agg_game$avg_run_epa_allowed), 
+             linetype = 'dashed', size = .5, color = 'black') +
+  geom_vline(xintercept = mean(bu_def_agg_game$avg_pass_epa_allowed), 
+             linetype = 'dashed', size = .5, color = 'black') +
+  annotate("path",
+           x = (as.numeric(bu_def_agg_game[bu_def_agg_game$opponent == opp_name,
+                        'avg_pass_epa_allowed'])) + .05 * cos(seq(0, 2 * pi, length.out = 100)),
+           y = (as.numeric(bu_def_agg_game[bu_def_agg_game$opponent == opp_name,
+                        'avg_run_epa_allowed'])) + .05 * sin(seq(0, 2 * pi, length.out = 100)), 
+           color = 'darkred', size = 1) +
+  
+  # Annotate quadrants
+  annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) - .5,
+           y = mean(bu_def_agg_game$avg_run_epa_allowed) + .05,
+           label = "Weak Run DEF\nStrong Pass DEF",
+           color = "black", size = 3, fontface = "plain",
+           hjust = 0, vjust = 1) +
+  annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) - .5,
+           y = mean(bu_def_agg_game$avg_run_epa_allowed) - .05,
+           label = "Strong Run DEF\nStrong Pass DEF",
+           color = "black", size = 3, fontface = "plain",
+           hjust = 0, vjust = 0) +
+  annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) + 0.35,
+           y = mean(bu_def_agg_game$avg_run_epa_allowed) + 0.1,
+           label = "Weak Run DEF\nWeak Pass DEF",
+           color = "black", size = 3, fontface = "plain",
+           hjust = 1, vjust = 1) +
+  annotate("text", x = mean(bu_def_agg_game$avg_pass_epa_allowed) + 0.25,
+           y = mean(bu_def_agg_game$avg_run_epa_allowed) - 0.05,
+           label = "Strong Run DEF\nWeak Pass DEF",
+           color = "black", size = 3, fontface = "plain",
+           hjust = 1, vjust = 0)
+
+```
+
+<br>
+
+```{r, warning=FALSE}
+
+### Comparison Chart
+
+# pivot def data
+comp_chart_def = combined_def_agg[1:3] %>% 
+  pivot_longer(cols = 2:3,
+             names_to = 'statistic',
+             values_to = 'value') 
+  
+comp_chart_def %>% 
+  ggplot(aes(x = statistic, y = value, fill = grouping)) +
+  geom_bar(position = "dodge", stat = "identity", width = .8) +
+  
+#Add data labels
+  geom_text(aes(label = round(value, 2),# Round to 3 decimal places
+            vjust = ifelse(value >= 0, 1.5, -1)),
+            position = position_dodge(width = 0.8),# Align with bars
+            size = 4,#Adjust text size as needed
+            color = "black",
+            fontface = "bold"
+  ) +
+  
+# choose color scheme
+  scale_fill_manual(values = c(bu_alt_color, bu_color, "grey35")) +
+  
+# format background
+  theme(legend.position = "bottom",
+        panel.background = element_rect(fill = 'lightgray'),
+        panel.grid.major = element_line(color = 'white', size = .01),
+        panel.grid.minor = element_line(color = 'white', size = .01),
+        panel.border = element_blank()) +
+  
+# adjust axis labels
+  labs(x = "", y = "EPA Allowed per play",
+       subtitle = "EPA Allowed per play compared to Baylor Season and Power 4 teams",
+       title = 'Baylor Defensive EPA Allowed Comparison') +
+# adjust legend label
+  guides(fill = guide_legend(title = "Key")) +
+# adjust axis label spacing
+  theme(axis.title.x = element_text(margin = margin(t = 15)), 
+        axis.title.y = element_text(margin = margin(r = 15)),
+# adjust title positioning and size
+        plot.title = element_text(size = 14, hjust = 0, face = "bold")) +
+# axis
+  geom_hline(yintercept = 0, size = .5, color = 'black') +
+# axis labels
+  scale_x_discrete(labels = c('Pass', 'Run')) +
+# flip axis
+  scale_y_reverse(limits = c(max(comp_chart_def$value) + .03, min(comp_chart_def$value) - .03))
+          
+
+```
+
+\pagebreak
+
+<br>
+
+**Analysis:**
+
+Baylor performed very well against the pass, for another week in a row. Run performance was well below the season average.
+
+<br>
+
+**Compared to Other Baylor Games**
+
+-   As the scatter plot displays, Baylor didn't perform at their best compared to the season average.
+
+-   Baylor struggled to defend run. This was the worst performance against the run all season.
+
+<br>
+
+**Compared to Baylor Season and Power Four**
+
+-   Compared to other Power Four teams, Baylor's defense performed well against the pass, forcing multiple interceptions.
+
+-   Compared to the season average, Baylor's pass defense was some of the best it has been all season, which played a major factor in the win.
+
+<br>
+
+**Conclusion**
+
+Although the run defense struggled, the pass defense was able to make up for it. The Bears were able to force multiple interceptions and keep the Jayhawks from scoring more points then they did.
+
+\pagebreak
+
+## *LOOKING AHEAD*
+
+### Week 12: Baylor (7-4) vs Kansas (5-6)
+
+##### *Baylor will take on a red hot Kansas team.*
+
+<br>
+
+```{r}
+
+# Next Opp Off Comparison
+
+# pivot data
+next_comp_chart_off = next_combined_off_agg %>% 
+  pivot_longer(cols = 2:length(colnames(next_combined_off_agg)),
+             names_to = 'statistic',
+             values_to = 'value')
+
+next_comp_chart_off %>% 
+  ggplot(aes(x = value, y = statistic, fill = grouping)) +
+  geom_bar(position = "dodge", stat = "identity", width = .8) +
+  
+  geom_text(
+  aes(label = round(value, 2),
+      hjust = ifelse(value >= 0, -0.2, 1.2)),  # Adjusts label position based on value
+  position = position_dodge(width = 0.8),
+  size = 3.5,
+  color = "black",
+  fontface = "bold"
+) +
+  # choose color scheme
+  scale_fill_manual(values = c(next_color, "grey35")) +
+# format background
+  theme(legend.position = "bottom",
+        panel.background = element_rect(fill = 'lightgray'),
+        panel.grid.major = element_line(color = 'white', size = .01),
+        panel.grid.minor = element_line(color = 'white', size = .01),
+        panel.border = element_blank()) +
+# adjust axis labels
+  labs(y = "", x = "EPA per play", 
+       subtitle = "EPA per play by down compared to Power Four Teams",
+       title = paste(next_abr, 'Offensive EPA Comparison')) +
+# adjust legend label
+  guides(fill = guide_legend(title = "Key")) +
+# adjust axis label spacing
+  theme(axis.title.x = element_text(margin = margin(t = 15)), 
+        axis.title.y = element_text(margin = margin(r = 15)),
+# adjust title positioning and size
+        plot.title = element_text(size = 14, hjust = 0, face = "bold")) +
+# x-axis
+  geom_hline(yintercept = 0, size = .5, color = 'black') +
+# x-axis labels
+  scale_y_discrete(labels = c('1st Down Pass', '1st Down Run', '2nd Down Pass', 
+                            '2nd Down Run', '3rd Down Pass', '3rd Down Run', '4th Down Pass', '4th Down Run'))
+
+```
+
+<br>
+
+**Analysis:**
+
+Kansas is riding a three-game win streak mainly on the back of their run game. Controlling this will be a significant area of emphasis, especially on 3rd and 4th down plays.
+
+<br>
+
+**Compared to Power Four**
+
+-   Looking at the chart of EPA per play by down, the offense considerably over performs compared to the Power Four average in ALL of the categories.
+-   Kansas performs very well on 4th down run and pass. With success running the ball on almost every down, they will likely try to keep this going on Saturday.
+
+<br>
+
+**Conclusion**
+
+Based on this data the Bears should be ready for a run heavy attack.
+
+\pagebreak
+
+```{r}
+
+# Next Opp Def Comparison
+
+# pivot data
+next_comp_chart_def = next_combined_def_agg %>% 
+  pivot_longer(cols = 2:length(colnames(next_combined_def_agg)),
+             names_to = 'statistic',
+             values_to = 'value')
+
+next_comp_chart_def %>% 
+  ggplot(aes(x = value, y = statistic, fill = grouping)) +
+  geom_bar(position = "dodge", stat = "identity", width = .8) +
+  
+  geom_text(
+  aes(label = round(value, 2),
+      hjust = ifelse(value <= 0, -0.2, 1.2)),  # Adjusts label position based on value
+  position = position_dodge(width = 0.8),
+  size = 3.5,
+  color = "black",
+  fontface = "bold"
+) +
+  
+  # choose color scheme
+  scale_fill_manual(values = c(next_color, "grey35")) +
+  scale_x_reverse() +
+
+  # format background
+  theme(legend.position = "bottom",
+        panel.background = element_rect(fill = 'lightgray'),
+        panel.grid.major = element_line(color = 'white', size = .01),
+        panel.grid.minor = element_line(color = 'white', size = .01),
+        panel.border = element_blank()) +
+
+  # adjust axis labels
+  labs(y = "", x = "EPA Allowed per play", 
+       subtitle = "EPA Allowed per play by Down compared to Power Four Teams",
+       title = paste(next_abr, 'Defensive EPA Allowed Comparison')) +
+
+  # adjust legend label
+  guides(fill = guide_legend(title = "Key")) +
+
+  # adjust axis label spacing
+  theme(axis.title.x = element_text(margin = margin(t = 15)), 
+        axis.title.y = element_text(margin = margin(r = 15)),
+
+        # adjust title positioning and size
+        plot.title = element_text(size = 14, hjust = 0, face = "bold")) +
+
+  # x-axis
+  geom_hline(yintercept = 0, size = .5, color = 'black') +
+
+  # x-axis labels
+  scale_y_discrete(labels = c('1st Down Pass', '1st Down Run', '2nd Down Pass', 
+                            '2nd Down Run', '3rd Down Pass', '3rd Down Run', 
+                            '4th Down Pass', '4th Down Run')) 
+
+
+# data %>%
+#   filter(pos_team == 'Houston',
+#          !is.na(r_p),
+#          !is.na(EPA),
+#          down == 3,
+#          r_p == 'Pass') %>%
+#   group_by(pos_team) %>%
+#   summarize(avg = mean(EPA))
+  
+```
+
+<br>
+
+**Analysis:**
+
+Kansas presents a solid defense that could be more susceptible to a strong pass attack than we saw last week.
+
+<br>
+
+**Compared to Power Four**
+
+-   Houston performs worse than the Power Four average in 6/8 of the play type categories, especially on 4th down running plays.
+-   The defense seems to struggle in most pass situations from downs 1-3, the exception is 4th Down pass plays.
+-   Kansas struggles greatly on 4th Down runs but is the opposite on 4th Down passes where they excel, well above the Power Four average.
+
+<br>
+
+**Conclusion**
+
+-   Baylor should stick to its strong suit, passing the football, complemented with a consistent run game.
+-   On 3rd and 4th down, runs should be strongly considered, while passing in late downs (3rd/4th) should be scrutinized.
+
+<br> <br>
