@@ -23,13 +23,13 @@ power_conferences:
 # Game Schedule (Update weekly)
 games:
   - week: 1
-    opponent: "SMU"
-    opponent_abbr: "SMU"
-    next_opponent: "Samford"
-    next_opponent_abbr: "Samford"
-    game_result: "Win"
-    score_bu: 41
-    score_opp: 38
+    opponent: "Auburn"
+    opponent_abbr: "AUB"
+    next_opponent: "SMU"
+    next_opponent_abbr: "SMU"
+    #game_result: "Win"
+    #score_bu: 41
+    #score_opp: 38
 
   # Add more games as season progresses
   # - week: 2
@@ -37,6 +37,18 @@ games:
   #   opponent_abbr: "Samford"
   #   next_opponent: "NextTeam"
   #   next_opponent_abbr: "NextTeam"
+
+  - week: 2
+    opponent: "SMU"
+    opponent_abbr: "SMU"
+    next_opponent: "Samford"
+    next_opponent_abbr: "Samford"
+
+  - week: 3
+    opponent: "Samford"
+    opponent_abbr: "Samford"
+    next_opponent: ""
+    next_opponent_abbr: ""
 
 # Report Output Configuration
 output:
