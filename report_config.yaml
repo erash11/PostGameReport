@@ -1,0 +1,65 @@
+# ====================================================================
+# POST-GAME REPORT CONFIGURATION
+# ====================================================================
+# This file contains all configurable parameters for report generation
+# ====================================================================
+
+# Season Configuration
+season: 2025
+
+# Team Configuration
+team:
+  name: "Baylor"
+  abbreviation: "BU"
+
+# Conference Configuration
+power_conferences:
+  - "SEC"
+  - "Big 12"
+  - "Big Ten"
+  - "ACC"
+  - "Notre Dame"
+
+# Game Schedule (Update weekly)
+games:
+  - week: 1
+    opponent: "SMU"
+    opponent_abbr: "SMU"
+    next_opponent: "Samford"
+    next_opponent_abbr: "Samford"
+    game_result: "Win"
+    score_bu: 41
+    score_opp: 38
+
+  # Add more games as season progresses
+  # - week: 2
+  #   opponent: "Samford"
+  #   opponent_abbr: "Samford"
+  #   next_opponent: "NextTeam"
+  #   next_opponent_abbr: "NextTeam"
+
+# Report Output Configuration
+output:
+  format: "pdf"
+  output_dir: "./reports"
+  filename_pattern: "BU_vs_{opponent}_Week{week}_{date}.pdf"
+
+# Chart Configuration
+charts:
+  default_width: 12
+  default_height: 7
+  dpi: 300
+
+# Data Configuration
+data:
+  cache_enabled: true
+  cache_dir: "./cache"
+  cache_refresh_hours: 24
+
+# Analysis Configuration
+analysis:
+  include_player_stats: true
+  include_situational: true
+  include_tendency_report: true
+  include_wpa_analysis: true
+  include_exploit_matrix: true

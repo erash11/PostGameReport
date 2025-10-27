@@ -1,0 +1,27 @@
+# Cache files
+cache/
+*.rds
+
+# Output files
+reports/
+*.pdf
+*.html
+
+# R files
+.Rhistory
+.RData
+.Rproj.user
+
+# Temporary files
+*~
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.Rproj
