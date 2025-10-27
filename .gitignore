@@ -25,3 +25,11 @@ Thumbs.db
 .vscode/
 .idea/
 *.Rproj
+
+# Deployment files (don't commit these)
+rsconnect/
+.deployment_manifest.rds
+deploy_app.R
+
+# Shiny-specific
+*.dcf
