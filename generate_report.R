@@ -201,8 +201,11 @@ load_games_from_config <- function(config_file = "report_config.yaml") {
 # ====================================================================
 # COMMAND LINE INTERFACE
 # ====================================================================
+# Only run CLI code if this script is being executed directly via Rscript
+# NOT when it's being sourced by another script (like app.R)
+# sys.nframe() == 0 means we're at the top level (direct execution)
 
-if (!interactive()) {
+if (!interactive() && sys.nframe() == 0) {
   # Parse command line arguments
   args <- commandArgs(trailingOnly = TRUE)
 
