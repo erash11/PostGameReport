@@ -51,8 +51,21 @@ team_info_logo_join = team_info %>%
   select(school, logo)
 
 # Create table so you can easily join conferences to schools
-team_info_conf_join = team_info %>% 
-  select(school, conference)
+# Check if 'conference' column exists, otherwise use 'Conference' or handle gracefully
+if ("conference" %in% names(team_info)) {
+  team_info_conf_join = team_info %>%
+    select(school, conference)
+} else if ("Conference" %in% names(team_info)) {
+  team_info_conf_join = team_info %>%
+    select(school, Conference) %>%
+    rename(conference = Conference)
+} else {
+  # Fallback: create a warning and use empty conference data
+  warning("Conference column not found in team_info. Conference filtering may not work.")
+  team_info_conf_join = team_info %>%
+    select(school) %>%
+    mutate(conference = NA_character_)
+}
 
 
 ```
@@ -367,8 +380,8 @@ power_four_off_agg = data %>%
 
 power_four_off_agg = left_join(power_four_off_agg, team_info_conf_join, by = c('school'))
 
-power_four_off_agg = power_four_off_agg %>% 
-  filter(conference %in% power_four_conferences) %>% 
+power_four_off_agg = power_four_off_agg %>%
+  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
   filter(!is.na(EPA)) %>% 
   filter(!is.na(success)) %>%
   filter(r_p == 'Run' | r_p == 'Pass') %>% 
@@ -388,8 +401,8 @@ power_four_def_agg = data %>%
 
 power_four_def_agg = left_join(power_four_def_agg, team_info_conf_join, by = c('school'))
 
-power_four_def_agg = power_four_def_agg %>% 
-  filter(conference %in% power_four_conferences) %>% 
+power_four_def_agg = power_four_def_agg %>%
+  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
   filter(!is.na(EPA)) %>% 
   filter(!is.na(success)) %>%
   filter(r_p == 'Run' | r_p == 'Pass') %>% 
@@ -484,8 +497,8 @@ power_four_off_down_agg = data %>%
 
 power_four_off_down_agg = left_join(power_four_off_down_agg, team_info_conf_join, by = c('school'))
 
-power_four_off_down_agg = power_four_off_down_agg %>% 
-  filter(conference %in% power_four_conferences) %>% 
+power_four_off_down_agg = power_four_off_down_agg %>%
+  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
   filter(!is.na(EPA)) %>% 
   filter(!is.na(success)) %>%
   filter(r_p == 'Run' | r_p == 'Pass') %>% 
@@ -508,8 +521,8 @@ power_four_def_down_agg = data %>%
 
 power_four_def_down_agg = left_join(power_four_def_down_agg, team_info_conf_join, by = c('school'))
 
-power_four_def_down_agg = power_four_def_down_agg %>% 
-  filter(conference %in% power_four_conferences) %>% 
+power_four_def_down_agg = power_four_def_down_agg %>%
+  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
   filter(!is.na(EPA)) %>% 
   filter(!is.na(success)) %>%
   filter(r_p == 'Run' | r_p == 'Pass') %>% 
