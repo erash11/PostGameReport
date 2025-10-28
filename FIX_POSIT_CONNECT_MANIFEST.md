@@ -4,9 +4,32 @@
 
 ---
 
-## ⚡ **QUICK FIX - Run This Now!**
+## ⚡ **QUICK FIX - Choose Your Method:**
 
-In your R console (in Posit Cloud or RStudio):
+### **Method 1: Deploying from GitHub (EASIEST)** ⭐
+
+**If you're deploying from GitHub and can't use the R console:**
+
+Run this script **locally on your computer**:
+
+```bash
+Rscript create_manifest.R
+```
+
+Then commit and push:
+```bash
+git add manifest.json
+git commit -m "Add manifest.json for Posit Connect"
+git push
+```
+
+Now deploy from GitHub to Posit Connect - the manifest.json will be included!
+
+---
+
+### **Method 2: Using R Console**
+
+**If you have access to R console (in Posit Cloud or RStudio):**
 
 ```r
 # Install rsconnect if needed
