@@ -60,27 +60,30 @@ When you see the `>` prompt again, it's done.
 
 ---
 
-### Step 3: Generate manifest.json
+### Step 3: Generate manifest.json ⚠️ CRITICAL STEP
 
-Still in the **R Console**, run:
+Still in the **R Console**, run this **EXACT** command:
 
 ```r
 # Generate the complete manifest with ALL dependencies
+# CRITICAL: appPrimaryDoc MUST be "app.R" (the Shiny app)
 rsconnect::writeManifest(
   appDir = ".",
   appFiles = c(
-    "app.R",
+    "app.R",                    # PRIMARY FILE - the Shiny web app
     "helper_functions.R",
     "data_loader.R",
     "feature_analytics.R",
-    "generate_report.R",
+    "generate_report.R",        # Used by app.R, but NOT the entry point
     "BU_Post_2024.Rmd",
     "report_config.yaml",
     "TSU.png"
   ),
-  appPrimaryDoc = "app.R"
+  appPrimaryDoc = "app.R"       # MUST BE app.R - this is the Shiny app!
 )
 ```
+
+**CRITICAL:** The `appPrimaryDoc = "app.R"` line tells Posit Connect to run the **Shiny web app** (app.R), NOT the command-line script (generate_report.R).
 
 You should see:
 ```
@@ -143,7 +146,7 @@ Go to your repository on GitHub and verify:
 
 ---
 
-### Step 7: Deploy to Posit Connect
+### Step 7: Deploy to Posit Connect ⚠️ IMPORTANT SETTINGS
 
 Now you're ready! Deploy from GitHub to Posit Connect:
 
@@ -151,11 +154,16 @@ Now you're ready! Deploy from GitHub to Posit Connect:
 2. Click **"Publish"** → **"Import from Git"**
 3. Select your repository
 4. Branch: `claude/code-optimization-review-011CUYDAbmFRqz9wGSzVMsoD`
-5. **Content Type:** Shiny Application
-6. **Primary Document:** app.R
+5. **Content Type:** ⚠️ **Shiny Application** (not R Markdown!)
+6. **Primary Document:** ⚠️ **app.R** (NOT generate_report.R!)
 7. Click **"Deploy"**
 
-This time it should work! The complete manifest.json will tell Posit Connect to install all ~50+ packages with their dependencies.
+**CRITICAL:** Make absolutely sure:
+- ✅ Content Type = "Shiny Application"
+- ✅ Primary Document = "app.R"
+- ❌ NOT "generate_report.R" (that's a command-line script)
+
+This time it should work! The complete manifest.json will tell Posit Connect to install all ~50+ packages with their dependencies, and it will run app.R (the Shiny web app).
 
 ---
 
@@ -177,10 +185,40 @@ This time it should work! The complete manifest.json will tell Posit Connect to 
   ```
 - Then run the `writeManifest()` command again
 
+### "Your application failed to start" - Trying to run generate_report.R
+**This is the most common error!**
+
+**Symptom:** Logs show generate_report.R usage help (--week, --opponent, etc.)
+
+**Cause:** Deployment is trying to run the command-line script instead of the Shiny app
+
+**Solutions:**
+1. **Delete old manifest and regenerate:**
+   ```r
+   # In Posit Cloud R Console
+   file.remove("manifest.json")
+   source("fix_manifest_entry_point.R")  # This creates correct manifest
+   ```
+
+2. **Check Posit Connect deployment settings:**
+   - Delete any failed/old deployments
+   - Create a NEW deployment
+   - When deploying, explicitly select:
+     - Content Type: "Shiny Application"
+     - Primary Document: "app.R"
+
+3. **Verify manifest.json is correct:**
+   ```r
+   # In Posit Cloud R Console
+   manifest <- jsonlite::fromJSON("manifest.json")
+   manifest$metadata$entrypoint  # Should say "app.R"
+   ```
+
 ### Still getting deployment errors?
 - Check the Posit Connect logs carefully
 - Make sure `app.R` exists and has `shinyApp(ui = ui, server = server)` at the end
 - Verify all files listed in `appFiles` actually exist
+- Try using the fix_manifest_entry_point.R script
 
 ---
 
