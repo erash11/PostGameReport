@@ -380,13 +380,20 @@ power_four_off_agg = data %>%
 
 power_four_off_agg = left_join(power_four_off_agg, team_info_conf_join, by = c('school'))
 
+# Safely filter by conference - check if column exists first
+if ("conference" %in% names(power_four_off_agg)) {
+  power_four_off_agg = power_four_off_agg %>%
+    filter(!is.na(conference), conference %in% power_four_conferences)
+} else {
+  warning("Conference column not found after join - using all teams")
+}
+
 power_four_off_agg = power_four_off_agg %>%
-  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
-  filter(!is.na(EPA)) %>% 
+  filter(!is.na(EPA)) %>%
   filter(!is.na(success)) %>%
-  filter(r_p == 'Run' | r_p == 'Pass') %>% 
-  mutate(grouping = 'Power 4') %>% 
-  group_by(grouping) %>% 
+  filter(r_p == 'Run' | r_p == 'Pass') %>%
+  mutate(grouping = 'Power 4') %>%
+  group_by(grouping) %>%
   summarise(avg_pass_epa = mean(EPA[r_p == 'Pass']),
             avg_run_epa = mean(EPA[r_p == 'Run']),
             success_rate_pass = mean(success[r_p == 'Pass']),
@@ -401,13 +408,20 @@ power_four_def_agg = data %>%
 
 power_four_def_agg = left_join(power_four_def_agg, team_info_conf_join, by = c('school'))
 
+# Safely filter by conference - check if column exists first
+if ("conference" %in% names(power_four_def_agg)) {
+  power_four_def_agg = power_four_def_agg %>%
+    filter(!is.na(conference), conference %in% power_four_conferences)
+} else {
+  warning("Conference column not found after join - using all teams")
+}
+
 power_four_def_agg = power_four_def_agg %>%
-  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
-  filter(!is.na(EPA)) %>% 
+  filter(!is.na(EPA)) %>%
   filter(!is.na(success)) %>%
-  filter(r_p == 'Run' | r_p == 'Pass') %>% 
-  mutate(grouping = 'Power 4') %>% 
-  group_by(grouping) %>%  
+  filter(r_p == 'Run' | r_p == 'Pass') %>%
+  mutate(grouping = 'Power 4') %>%
+  group_by(grouping) %>%
   summarise(avg_pass_epa_allowed = mean(EPA[r_p == 'Pass']),
             avg_run_epa_allowed = mean(EPA[r_p == 'Run']),
             success_rate_allowed_pass = mean(success[r_p == 'Pass']),
@@ -497,13 +511,20 @@ power_four_off_down_agg = data %>%
 
 power_four_off_down_agg = left_join(power_four_off_down_agg, team_info_conf_join, by = c('school'))
 
+# Safely filter by conference - check if column exists first
+if ("conference" %in% names(power_four_off_down_agg)) {
+  power_four_off_down_agg = power_four_off_down_agg %>%
+    filter(!is.na(conference), conference %in% power_four_conferences)
+} else {
+  warning("Conference column not found after join - using all teams")
+}
+
 power_four_off_down_agg = power_four_off_down_agg %>%
-  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
-  filter(!is.na(EPA)) %>% 
+  filter(!is.na(EPA)) %>%
   filter(!is.na(success)) %>%
-  filter(r_p == 'Run' | r_p == 'Pass') %>% 
-  mutate(grouping = 'Power 4') %>% 
-  group_by(grouping) %>% 
+  filter(r_p == 'Run' | r_p == 'Pass') %>%
+  mutate(grouping = 'Power 4') %>%
+  group_by(grouping) %>%
   summarise(avg_1st_pass_epa = mean(EPA[r_p == 'Pass' & down == 1]),
             avg_1st_run_epa = mean(EPA[r_p == 'Run' & down == 1]),
             avg_2nd_pass_epa = mean(EPA[r_p == 'Pass' & down == 2]),
@@ -521,13 +542,20 @@ power_four_def_down_agg = data %>%
 
 power_four_def_down_agg = left_join(power_four_def_down_agg, team_info_conf_join, by = c('school'))
 
+# Safely filter by conference - check if column exists first
+if ("conference" %in% names(power_four_def_down_agg)) {
+  power_four_def_down_agg = power_four_def_down_agg %>%
+    filter(!is.na(conference), conference %in% power_four_conferences)
+} else {
+  warning("Conference column not found after join - using all teams")
+}
+
 power_four_def_down_agg = power_four_def_down_agg %>%
-  filter(!is.na(conference) & conference %in% power_four_conferences) %>% 
-  filter(!is.na(EPA)) %>% 
+  filter(!is.na(EPA)) %>%
   filter(!is.na(success)) %>%
-  filter(r_p == 'Run' | r_p == 'Pass') %>% 
-  mutate(grouping = 'Power 4') %>% 
-  group_by(grouping) %>%  
+  filter(r_p == 'Run' | r_p == 'Pass') %>%
+  mutate(grouping = 'Power 4') %>%
+  group_by(grouping) %>%
   summarise(avg_1st_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 1]),
             avg_1st_run_epa_allowed = mean(EPA[r_p == 'Run' & down == 1]),
             avg_2nd_pass_epa_allowed = mean(EPA[r_p == 'Pass' & down == 2]),
