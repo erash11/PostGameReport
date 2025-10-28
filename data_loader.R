@@ -6,6 +6,31 @@
 
 library(cfbfastR)
 
+# ====================================================================
+# API KEY SETUP
+# ====================================================================
+# Register CFBD API key if available in environment
+# Get your free API key at: https://collegefootballdata.com/
+# Set the CFBD_API_KEY environment variable in Posit Connect
+
+cfbd_api_key <- Sys.getenv("CFBD_API_KEY")
+
+if (nzchar(cfbd_api_key)) {
+  # Register the API key with cfbfastR
+  tryCatch({
+    cfbfastR::register_cfbd(api_key = cfbd_api_key)
+    message("✓ CFBD API key registered successfully")
+  }, error = function(e) {
+    warning("Failed to register CFBD API key: ", e$message)
+  })
+} else {
+  warning(
+    "CFBD_API_KEY environment variable not set.\n",
+    "  Get a free API key at: https://collegefootballdata.com/\n",
+    "  Set it as an environment variable in Posit Connect settings."
+  )
+}
+
 #' Load CFB Play-by-Play Data with Caching
 #'
 #' @param season Season year (default: 2025)

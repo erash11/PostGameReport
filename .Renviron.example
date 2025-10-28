@@ -1,0 +1,21 @@
+# ====================================================================
+# ENVIRONMENT VARIABLES TEMPLATE
+# ====================================================================
+# Copy this file to .Renviron and add your actual values
+#
+# IMPORTANT: Never commit .Renviron to git (it contains secrets!)
+# ====================================================================
+
+# CollegeFootballData.com API Key
+# Get your free API key at: https://collegefootballdata.com/
+CFBD_API_KEY=your-api-key-here
+
+# ====================================================================
+# DEPLOYMENT NOTES
+# ====================================================================
+# For Posit Connect deployment:
+#   1. Go to your app in Posit Connect
+#   2. Click "Vars" or "Environment Variables"
+#   3. Add CFBD_API_KEY with your actual key
+#   4. Restart the app
+# ====================================================================
