@@ -47,8 +47,8 @@ games:
   - week: 3
     opponent: "Samford"
     opponent_abbr: "Samford"
-    next_opponent: ""
-    next_opponent_abbr: ""
+    next_opponent: "Arizona State"
+    next_opponent_abbr: "ASU"
 
 # Report Output Configuration
 output:
