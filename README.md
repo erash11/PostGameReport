@@ -80,19 +80,23 @@ The app will open in your browser with a simple point-and-click interface:
 
 Publish your Shiny app online so anyone can access it:
 
+**Option 1: Posit Cloud (RECOMMENDED - Easiest!)**
+1. Go to [posit.cloud](https://posit.cloud/)
+2. Create project from GitHub
+3. Click "Publish" button in RStudio
+4. Done! Share your URL
+
+**See:** [DEPLOY_POSIT_CLOUD.md](DEPLOY_POSIT_CLOUD.md) - 5-minute setup guide
+
+**Option 2: shinyapps.io (Alternative)**
 ```r
-# 1. Prepare for deployment
 source("prepare_deployment.R")
-
-# 2. Deploy to shinyapps.io (free!)
 source("deploy_app.R")
-
-# 3. Share your URL with the team!
 ```
 
-**Result:** `https://yourname.shinyapps.io/baylor-football-analytics/`
+**See:** [DEPLOY_QUICK_START.md](DEPLOY_QUICK_START.md) - shinyapps.io guide
 
-Anyone with the URL can generate reports - no R installation needed! See [DEPLOY_QUICK_START.md](DEPLOY_QUICK_START.md) for step-by-step guide.
+**Having deployment issues?** → [TROUBLESHOOTING_DEPLOYMENT.md](TROUBLESHOOTING_DEPLOYMENT.md)
 
 ---
 
