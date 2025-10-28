@@ -82,15 +82,16 @@ The app will open in your browser with a simple point-and-click interface:
 Publish your Shiny app online so anyone can access it:
 
 **Option 1: Posit Connect (RECOMMENDED - Easiest!)**
-1. Generate manifest (run locally): `Rscript create_manifest.R`
-2. Commit and push to GitHub
-3. Deploy from GitHub to Posit Connect
-4. Done! Share your URL
+1. Open project in Posit Cloud
+2. Generate manifest.json with complete dependencies
+3. Commit and push to GitHub
+4. Deploy from GitHub to Posit Connect
 
-**See:** [DEPLOY_POSIT_CONNECT.md](DEPLOY_POSIT_CONNECT.md) - Deployment from GitHub guide
+**See:** [GENERATE_MANIFEST_POSIT_CLOUD.md](GENERATE_MANIFEST_POSIT_CLOUD.md) - **START HERE!** Complete step-by-step guide
 
-**OR use Posit Cloud:**
-[DEPLOY_POSIT_CLOUD.md](DEPLOY_POSIT_CLOUD.md) - Interactive deployment guide
+**Other resources:**
+- [DEPLOY_POSIT_CONNECT.md](DEPLOY_POSIT_CONNECT.md) - Full deployment reference
+- [DEPLOY_POSIT_CLOUD.md](DEPLOY_POSIT_CLOUD.md) - Alternative approach
 
 **Option 2: shinyapps.io (Alternative)**
 ```r
