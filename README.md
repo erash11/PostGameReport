@@ -39,6 +39,7 @@ PostGameReport/
 ├── app.R                      # Shiny web interface
 ├── run_app.R                  # App launcher
 ├── SHINY_APP_GUIDE.md         # Web app documentation
+├── create_manifest.R          # Generate manifest for Posit Connect
 ├── prepare_deployment.R       # Deployment preparation script
 ├── DEPLOYMENT_GUIDE.md        # Full deployment guide
 ├── DEPLOY_QUICK_START.md      # Quick deployment (10 min)
@@ -80,13 +81,16 @@ The app will open in your browser with a simple point-and-click interface:
 
 Publish your Shiny app online so anyone can access it:
 
-**Option 1: Posit Cloud (RECOMMENDED - Easiest!)**
-1. Go to [posit.cloud](https://posit.cloud/)
-2. Create project from GitHub
-3. Click "Publish" button in RStudio
+**Option 1: Posit Connect (RECOMMENDED - Easiest!)**
+1. Generate manifest (run locally): `Rscript create_manifest.R`
+2. Commit and push to GitHub
+3. Deploy from GitHub to Posit Connect
 4. Done! Share your URL
 
-**See:** [DEPLOY_POSIT_CLOUD.md](DEPLOY_POSIT_CLOUD.md) - 5-minute setup guide
+**See:** [DEPLOY_POSIT_CONNECT.md](DEPLOY_POSIT_CONNECT.md) - Deployment from GitHub guide
+
+**OR use Posit Cloud:**
+[DEPLOY_POSIT_CLOUD.md](DEPLOY_POSIT_CLOUD.md) - Interactive deployment guide
 
 **Option 2: shinyapps.io (Alternative)**
 ```r
