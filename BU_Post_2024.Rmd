@@ -776,24 +776,30 @@ message("Looking for Baylor logo...")
 bu_logo_wp <- team_info$logo[team_info$school == "Baylor"]
 if (length(bu_logo_wp) == 0 || is.na(bu_logo_wp) || bu_logo_wp == "") {
   warning("❌ Baylor logo not found - using GREEN placeholder")
-  bu_logo <- image_blank(150, 150, color = "#003015")
+  bu_logo_for_wp <- image_blank(150, 150, color = "#003015")
+  message("Created GREEN placeholder for Baylor")
 } else {
   message("✓ Baylor logo URL: ", bu_logo_wp)
-  bu_logo <- image_read(bu_logo_wp)
-  message("✓ Baylor logo loaded successfully")
+  bu_logo_for_wp <- image_read(bu_logo_wp)
+  message("✓ Baylor logo loaded successfully (type: ", class(bu_logo_for_wp), ")")
 }
 
 message("Looking for ", opp_name, " logo...")
 opp_logo_wp <- team_info$logo[team_info$school == opp_name]
 if (length(opp_logo_wp) == 0 || is.na(opp_logo_wp) || opp_logo_wp == "") {
   warning("❌ Opponent logo not found for: ", opp_name, " - using colored placeholder")
-  opp_logo <- image_blank(150, 150, color = opp_color)
+  opp_logo_for_wp <- image_blank(150, 150, color = opp_color)
   message("Created placeholder with color: ", opp_color)
 } else {
   message("✓ Opponent logo URL: ", opp_logo_wp)
-  opp_logo <- image_read(opp_logo_wp)
-  message("✓ Opponent logo loaded successfully")
+  opp_logo_for_wp <- image_read(opp_logo_wp)
+  message("✓ Opponent logo loaded successfully (type: ", class(opp_logo_for_wp), ")")
 }
+
+# Verify both logos are valid before proceeding
+message("Verifying logos before drawing...")
+message("  Baylor logo valid: ", !is.null(bu_logo_for_wp))
+message("  Opponent logo valid: ", !is.null(opp_logo_for_wp))
 message("=== Logos loaded ===")
 
 # Game Win Probability chart
@@ -836,8 +842,8 @@ win_plot_data %>%
 
   # Position logos: Baylor always on top, opponent on bottom
   # Using coordinates that were proven to work: y=0.88 for top, y=-0.12 for bottom
-  draw_image(bu_logo, x = -61, y = 0.88, width = 6.67, height = 2) +
-  draw_image(opp_logo, x = -61, y = -0.12, width = 6.67, height = 2) +
+  draw_image(bu_logo_for_wp, x = -61, y = 0.88, width = 6.67, height = 2) +
+  draw_image(opp_logo_for_wp, x = -61, y = -0.12, width = 6.67, height = 2) +
   
   # Use dynamic column name for color scale
   scale_color_manual(labels = setNames("BU", wp_column),                              # Set colors automatically
