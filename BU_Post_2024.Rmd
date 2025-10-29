@@ -40,6 +40,9 @@ library(ggdark)
 library(janitor)
 library(grid)
 library(png)
+
+# Load analysis generator functions
+source("analysis_generator.R")
 ```
 
 ```{r, include=FALSE}
@@ -737,8 +740,19 @@ Data Source: cfbfastR
 
 # Game Win Probability chart
 # Select Baylor vs Opponent
-win_plot_data <- current_game_data %>% 
+win_plot_data <- current_game_data %>%
   filter(!is.na(away_wp_before) & !is.na(home_wp_before))
+
+# Automatically detect if Baylor is home or away
+is_baylor_home <- current_game_data$home_team[1] == "Baylor"
+message("Baylor is playing: ", if(is_baylor_home) "HOME" else "AWAY")
+
+# Select the appropriate win probability column
+if (is_baylor_home) {
+  wp_column <- "home_wp_before"
+} else {
+  wp_column <- "away_wp_before"
+}
 
 background_data <- data.frame(xmin = -Inf, xmax = Inf,
                               ymin = c(-Inf, .5),
@@ -748,12 +762,9 @@ background_data <- data.frame(xmin = -Inf, xmax = Inf,
 
 # Generate plot
 win_plot_data %>%
-  
-  dplyr::select(game_mins_rem,                                                          # Use game seconds remaining
- 
-########################### CHANGE WP BEFORE IF BU HOME OR AWAY##########################
-                away_wp_before) %>%                                                     # Use away win probability
-  
+
+  dplyr::select(game_mins_rem, !!sym(wp_column)) %>%                                   # Use appropriate win probability (auto-detected)
+
   gather(team, wpa,-game_mins_rem) %>% # Melt data
   ggplot(aes(x = game_mins_rem, y = wpa, color = team)) +                               # Set aesthetics
   geom_rect(data = background_data, 
@@ -763,14 +774,14 @@ win_plot_data %>%
   #geom_line(size = 1, color = "black") +                                               # Set geom line
   geom_smooth(size = 1, color = "black", se = FALSE, method = "loess", span = 0.15) +   # Set geom line
   geom_hline(yintercept = 0.5, color = "grey", linetype = "dashed") +                   # Set horizontal line
+
+  # Position logos appropriately (home team on top)
+  draw_image(bu_logo, x = -61, y = if(is_baylor_home) 0.88 else -0.12, width = 6.67, height = 2) +
+  draw_image(opp_logo, x = -61, y = if(is_baylor_home) -0.12 else 0.88, width = 6.67, height = 2) +
   
-      ################################################################# ADJUST LOGOS AS NEEDED  
-  draw_image(bu_logo,x = -61, y = -.12, width = 6.67, height = 2) +
-  draw_image(opp_logo,x = -61, y = -.87, width = 6.67, height = 2) +
-  
-   ########################################################### CHANGE WP BEFORE IF BU HOME OR AWAY
-  scale_color_manual(labels = c("home_wp_before" = "BU"),                             # Set colors manually
-                     values = c("home_wp_before" = "black"),
+  # Use dynamic column name for color scale
+  scale_color_manual(labels = setNames("BU", wp_column),                              # Set colors automatically
+                     values = setNames("black", wp_column),
                      guide = FALSE) +
   scale_x_reverse(breaks = seq(0, 60, 5)) +                                           # Flip cords to count down time
   annotate("text", x = 55, y = .95, label = "", color = "black", size = 8) +          # Add team labels
@@ -794,7 +805,7 @@ NOTE: This chart assumes each team has an equal chance to win the game at the st
 
 **ANALYSIS:**
 
-Baylor started slow in the first quarter, but quickly gained momentum in the second quarter. The Bears maintained a lead throughout the game, with a win probability of over 50% for the majority of the game. The win probability chart shows Baylor's dominance over Kansas, with the Bears having a high chance of winning the game.
+`r generate_wp_analysis(win_plot_data, opp_name, wp_column)`
 
 \pagebreak
 
@@ -954,27 +965,23 @@ comp_chart_off %>%
 
 **Analysis:**
 
-Offensively, Baylor was able to move the ball effectively against Kansas. The EPA per play was higher than the season average for both passing and running plays. The EPA per play was also higher than the average of Power Four teams for running plays. This indicates that Baylor's offense was able to outperform the average Power Four team in terms of running plays. Baylor exhibited some the best offense of the season. Both the run and pass game were strong, with the pass game being the strongest it has been all season.
+`r generate_offense_analysis(current_game_off_agg, bu_season_off_agg, power_four_off_agg)`
 
 <br>
 
 **Compared to Other Baylor Games**
 
--   As shown in the scatter plot above, the EPA per rush and pass were some of the best all season.
-
-<br>
-
-**Compared to Baylor Season and Power Four**
-
--   Compared to Power Four teams, Baylor's passing offense significantly out performed the Power Four teams, on average. Additionally, Baylor way over performed their season average.
--   As for running plays, the EPA per play was higher than other Power Four offenses. This result, as it has been over the past five games, outperformed the P4 average.
-
+The scatter plot above shows this game's performance relative to all other games this season.
 
 <br>
 
 **Conclusion**
 
-Overall, the Baylor offense had a strong performance against Kansas. The Bears were able to move the ball effectively through both the passing and running game.
+`r if(current_game_off_agg$avg_pass_epa[1] > bu_season_off_agg$avg_pass_epa[1] && current_game_off_agg$avg_run_epa[1] > bu_season_off_agg$avg_run_epa[1]) {
+  paste("Overall, Baylor's offense was firing on all cylinders against", opp_name, "with both the passing and running game exceeding season averages.")
+} else {
+  paste("Overall, Baylor's offense showed room for improvement against", opp_name, "but found success in certain areas.")
+}`
 
 \pagebreak
 
@@ -1165,29 +1172,13 @@ comp_chart_def %>%
 
 **Analysis:**
 
-Baylor performed very well against the pass, for another week in a row. Run performance was well below the season average.
+`r generate_defense_analysis(current_game_def_agg, bu_season_def_agg, power_four_def_agg)`
 
 <br>
 
 **Compared to Other Baylor Games**
 
--   As the scatter plot displays, Baylor didn't perform at their best compared to the season average.
-
--   Baylor struggled to defend run. This was the worst performance against the run all season.
-
-<br>
-
-**Compared to Baylor Season and Power Four**
-
--   Compared to other Power Four teams, Baylor's defense performed well against the pass, forcing multiple interceptions.
-
--   Compared to the season average, Baylor's pass defense was some of the best it has been all season, which played a major factor in the win.
-
-<br>
-
-**Conclusion**
-
-Although the run defense struggled, the pass defense was able to make up for it. The Bears were able to force multiple interceptions and keep the Jayhawks from scoring more points then they did.
+The scatter plot above shows this game's defensive performance relative to all other games this season.
 
 \pagebreak
 
@@ -1252,20 +1243,7 @@ next_comp_chart_off %>%
 
 **Analysis:**
 
-Kansas is riding a three-game win streak mainly on the back of their run game. Controlling this will be a significant area of emphasis, especially on 3rd and 4th down plays.
-
-<br>
-
-**Compared to Power Four**
-
--   Looking at the chart of EPA per play by down, the offense considerably over performs compared to the Power Four average in ALL of the categories.
--   Kansas performs very well on 4th down run and pass. With success running the ball on almost every down, they will likely try to keep this going on Saturday.
-
-<br>
-
-**Conclusion**
-
-Based on this data the Bears should be ready for a run heavy attack.
+`r generate_next_opp_offense_analysis(next_opp_off_agg, power_four_off_agg, next_name)`
 
 \pagebreak
 
@@ -1342,21 +1320,6 @@ next_comp_chart_def %>%
 
 **Analysis:**
 
-Kansas presents a solid defense that could be more susceptible to a strong pass attack than we saw last week.
-
-<br>
-
-**Compared to Power Four**
-
--   Houston performs worse than the Power Four average in 6/8 of the play type categories, especially on 4th down running plays.
--   The defense seems to struggle in most pass situations from downs 1-3, the exception is 4th Down pass plays.
--   Kansas struggles greatly on 4th Down runs but is the opposite on 4th Down passes where they excel, well above the Power Four average.
-
-<br>
-
-**Conclusion**
-
--   Baylor should stick to its strong suit, passing the football, complemented with a consistent run game.
--   On 3rd and 4th down, runs should be strongly considered, while passing in late downs (3rd/4th) should be scrutinized.
+`r generate_next_opp_defense_analysis(next_opp_def_agg, power_four_def_agg, next_name)`
 
 <br> <br>
