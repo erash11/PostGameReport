@@ -433,6 +433,32 @@ next_def_agg_game = left_join(next_def_agg_game, team_info_logo_join)
 # change school column to opponent
 #  rename(opponent = school)
 
+### Create Next Opp Season-Level Aggregates for Analysis
+
+## Next Opp Season OFF aggregate (simple, for analysis functions)
+next_opp_off_agg = next_season_off_data %>%
+  filter(!is.na(EPA)) %>%
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>%
+  mutate(grouping = paste(next_name, 'Season')) %>%
+  group_by(grouping) %>%
+  summarise(avg_pass_epa = mean(EPA[r_p == 'Pass']),
+            avg_run_epa = mean(EPA[r_p == 'Run']),
+            success_rate_pass = mean(success[r_p == 'Pass']),
+            success_rate_run = mean(success[r_p == 'Run']))
+
+## Next Opp Season DEF aggregate (simple, for analysis functions)
+next_opp_def_agg = next_season_def_data %>%
+  filter(!is.na(EPA)) %>%
+  filter(!is.na(success)) %>%
+  filter(r_p == 'Run' | r_p == 'Pass') %>%
+  mutate(grouping = paste(next_name, 'Season')) %>%
+  group_by(grouping) %>%
+  summarise(avg_pass_epa_allowed = mean(EPA[r_p == 'Pass']),
+            avg_run_epa_allowed = mean(EPA[r_p == 'Run']),
+            success_rate_allowed_pass = mean(success[r_p == 'Pass']),
+            success_rate_allowed_run = mean(success[r_p == 'Run']))
+
 ```
 
 ```{r, include=FALSE}
