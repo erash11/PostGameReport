@@ -4,6 +4,12 @@ subtitle: "41-38 victory over SMU"
 author: "Applied Performance Football Analytics"
 knit: pagedown::chrome_print
 output: html_document
+params:
+  week: 1
+  opponent: "SMU"
+  opponent_abbr: "SMU"
+  next_opponent: "Samford"
+  next_opponent_abbr: "Samford"
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
@@ -127,49 +133,96 @@ data = data %>%
 
 ```{r, include=FALSE, message=FALSE}
 
-###################### WEEKLY AND OPPONENT DATA, CHANGE NAMES AND ABR BELOW FOR EACH WEEK##############################
-#### Weekly Changes
+###################### WEEKLY AND OPPONENT DATA##############################
+# These values come from params when rendered via Shiny app
+# Or can be changed manually here for standalone rendering
 
-# opponent from this week, make sure it matches what opponent's name is in cfbfastr
-opp_name = "SMU"
-# abbreviation, just for purpose of putting it in graphs
-opp_abr = "SMU"
-
-# opponent for the following week
-next_name = "Samford"
-next_abr = "Samford"
+# Use params if available (from Shiny app), otherwise use defaults
+if (exists("params") && !is.null(params$opponent)) {
+  opp_name <- params$opponent
+  opp_abr <- params$opponent_abbr
+  next_name <- params$next_opponent
+  next_abr <- params$next_opponent_abbr
+} else {
+  # Fallback defaults for manual rendering
+  opp_name <- "SMU"
+  opp_abr <- "SMU"
+  next_name <- "Samford"
+  next_abr <- "Samford"
+}
 
 ############### DONT HAVE TO CHANGE ANYTHING BELOW ##############################
 
 ### Get team colors and logos
 
+# Debug: Print what we're looking for
+message("Looking up colors/logos for:")
+message("  Opponent: '", opp_name, "'")
+message("  Next Opponent: '", next_name, "'")
+
 # BU Blue
 bu_color <- team_info$color[team_info$school == "Baylor"]
+if (length(bu_color) == 0) {
+  warning("Baylor color not found in team_info - using default")
+  bu_color <- "#003015"  # Default Baylor green
+}
 
 # BU Gold
 bu_alt_color <- team_info$alt_color[team_info$school == "Baylor"]
+if (length(bu_alt_color) == 0) bu_alt_color <- "#FFB81C"  # Default Baylor gold
 
 # Opponent Main Color
 opp_color <- team_info$color[team_info$school == opp_name]
+if (length(opp_color) == 0) {
+  warning("Opponent '", opp_name, "' color not found in team_info - using default")
+  opp_color <- "#CC0000"  # Default red if not found
+}
 
 # Opponent Alt Color
 opp_alt_color <- team_info$alt_color[team_info$school == opp_name]
+if (length(opp_alt_color) == 0) opp_alt_color <- "#666666"  # Default gray if not found
 
 # Next Opponent Main Color
 next_color <- team_info$color[team_info$school == next_name]
+if (length(next_color) == 0) {
+  warning("Next opponent '", next_name, "' color not found in team_info - using default")
+  next_color <- "#0033CC"  # Default blue if not found
+}
 
 # Next Opponent Alt Color
 next_alt_color <- team_info$alt_color[team_info$school == next_name]
+if (length(next_alt_color) == 0) next_alt_color <- "#888888"  # Default gray if not found
 
 # BU Logo
-bu_logo <- image_read(team_info$logo[team_info$school == "Baylor"])
+bu_logo_url <- team_info$logo[team_info$school == "Baylor"]
+if (length(bu_logo_url) == 0 || is.na(bu_logo_url)) {
+  # Use TSU.png as placeholder if available, otherwise create blank
+  if (file.exists("TSU.png")) {
+    bu_logo <- image_read("TSU.png")
+  } else {
+    bu_logo <- image_blank(100, 100, color = "#003015")
+  }
+} else {
+  bu_logo <- image_read(bu_logo_url)
+}
 
 # Opponent Logo
-opp_logo <- image_read(team_info$logo[team_info$school == opp_name])
-#opp_logo <- image_read("TSU.png")
+opp_logo_url <- team_info$logo[team_info$school == opp_name]
+if (length(opp_logo_url) == 0 || is.na(opp_logo_url)) {
+  # Create a placeholder logo
+  opp_logo <- image_blank(100, 100, color = opp_color)
+} else {
+  opp_logo <- image_read(opp_logo_url)
+}
 
 # Next Opponent Logo
-next_logo <- image_read(team_info$logo[team_info$school == next_name])
+next_logo_url <- team_info$logo[team_info$school == next_name]
+if (length(next_logo_url) == 0 || is.na(next_logo_url)) {
+  # Create a placeholder logo
+  next_logo <- image_blank(100, 100, color = next_color)
+} else {
+  next_logo <- image_read(next_logo_url)
+}
 
 ```
 
