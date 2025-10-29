@@ -133,7 +133,7 @@ ui <- fluidPage(
       actionButton(
         "generate_btn",
         "Generate Report",
-        icon = icon("file-pdf"),
+        icon = icon("file-alt"),
         class = "btn-generate btn-block",
         style = "margin-top: 20px;"
       ),
@@ -231,11 +231,11 @@ ui <- fluidPage(
             ),
             tags$li(
               strong("Click 'Generate Report':"),
-              " The app will create a PDF report."
+              " The app will create an HTML report."
             ),
             tags$li(
               strong("Download:"),
-              " Once complete, click the download button to get your PDF."
+              " Once complete, click the download button to get your HTML report. You can open it in any web browser or save as PDF using your browser's print function."
             )
           ),
 
@@ -291,7 +291,7 @@ ui <- fluidPage(
           hr(),
           h5("Features:"),
           tags$ul(
-            tags$li("Automated PDF report generation"),
+            tags$li("Automated HTML report generation (easily convertible to PDF)"),
             tags$li("EPA (Expected Points Added) analysis"),
             tags$li("Win probability tracking"),
             tags$li("Player-level statistics"),
@@ -520,7 +520,7 @@ server <- function(input, output, session) {
 
       # Show notification
       showNotification(
-        "Report generated successfully! Click 'Download Report' to get your PDF.",
+        "Report generated successfully! Click 'Download Report' to get your HTML report.",
         type = "message",
         duration = 10
       )
@@ -591,7 +591,7 @@ server <- function(input, output, session) {
       style = "margin: 20px 0;",
       downloadButton(
         "download_report",
-        "Download Report (PDF)",
+        "Download Report (HTML)",
         icon = icon("download"),
         class = "btn-success btn-lg btn-block"
       ),
@@ -707,8 +707,8 @@ server <- function(input, output, session) {
         ))
       }
 
-      # Get list of PDF files
-      reports <- list.files("./reports", pattern = "\\.pdf$", full.names = TRUE)
+      # Get list of HTML files
+      reports <- list.files("./reports", pattern = "\\.html$", full.names = TRUE)
 
       if (length(reports) == 0) {
         return(data.frame(

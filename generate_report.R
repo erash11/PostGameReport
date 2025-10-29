@@ -56,7 +56,7 @@ generate_weekly_report <- function(week,
   report_date <- format(Sys.Date(), "%Y%m%d")
   output_file <- file.path(
     output_dir,
-    paste0("BU_vs_", opponent_abbr, "_Week", week, "_", report_date, ".pdf")
+    paste0("BU_vs_", opponent_abbr, "_Week", week, "_", report_date, ".html")
   )
 
   # Set environment variables for the report
