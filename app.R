@@ -9,6 +9,7 @@ library(shiny)
 library(shinythemes)
 library(shinyWidgets)
 library(DT)
+library(dplyr)
 
 # Source helper files
 source("generate_report.R")
@@ -178,6 +179,20 @@ ui <- fluidPage(
       tabsetPanel(
         type = "tabs",
 
+        # Schedule tab (NEW!)
+        tabPanel(
+          "Schedule",
+          br(),
+          h4("Baylor 2025 Schedule"),
+          p("Click on a game to auto-fill the report configuration."),
+          DTOutput("schedule_table"),
+          br(),
+          helpText(
+            class = "cache-info",
+            icon("info-circle"), " Click on any row to automatically fill in the week number and opponents."
+          )
+        ),
+
         # Cache info tab
         tabPanel(
           "Cache Status",
@@ -207,16 +222,12 @@ ui <- fluidPage(
           h4("How to Use"),
           tags$ol(
             tags$li(
-              strong("Select Week Number:"),
-              " Choose the week of the game you want to analyze."
+              strong("Easy Way - Use the Schedule:"),
+              " Go to the 'Schedule' tab and click on any game to auto-fill all fields!"
             ),
             tags$li(
-              strong("Choose Current Opponent:"),
-              " Select the team you just played."
-            ),
-            tags$li(
-              strong("Choose Next Opponent:"),
-              " Select the team you'll play next week."
+              strong("Manual Way - Select Manually:"),
+              " Choose week number, current opponent, and next opponent from the dropdowns."
             ),
             tags$li(
               strong("Click 'Generate Report':"),
@@ -231,6 +242,10 @@ ui <- fluidPage(
           hr(),
           h4("Tips"),
           tags$ul(
+            tags$li(
+              strong("Quick Start:"),
+              " The 'Schedule' tab shows Baylor's full 2025 schedule. Click any game to auto-fill the form - it's the fastest way!"
+            ),
             tags$li(
               strong("First Run:"),
               " The first report generation will take 30-60 seconds as it downloads data from the API."
@@ -317,6 +332,7 @@ server <- function(input, output, session) {
   # Reactive values for state management
   state <- reactiveValues(
     teams = NULL,
+    schedule = NULL,
     report_path = NULL,
     status_message = NULL,
     status_type = "info"
@@ -350,6 +366,98 @@ server <- function(input, output, session) {
         duration = 10
       )
     })
+  })
+
+  # Load Baylor schedule on startup
+  observe({
+    tryCatch({
+      # Load schedule
+      schedule <- load_team_schedule_cached(season = 2025, team = "Baylor")
+
+      if (!is.null(schedule) && nrow(schedule) > 0) {
+        state$schedule <- schedule
+        showNotification("Schedule loaded successfully!", type = "message")
+      } else {
+        showNotification("No schedule data available", type = "warning")
+      }
+
+    }, error = function(e) {
+      showNotification(
+        paste("Error loading schedule:", e$message),
+        type = "error",
+        duration = 10
+      )
+    })
+  })
+
+  # ====================================================================
+  # SCHEDULE DISPLAY
+  # ====================================================================
+
+  # Render schedule table
+  output$schedule_table <- renderDT({
+
+    if (is.null(state$schedule) || nrow(state$schedule) == 0) {
+      return(data.frame(
+        Message = "No schedule data available. Check API connection and try refreshing."
+      ))
+    }
+
+    # Format schedule for display
+    display_schedule <- state$schedule %>%
+      dplyr::mutate(
+        game_date = format(as.POSIXct(game_date), "%b %d, %Y"),
+        status = ifelse(completed, "Completed", "Upcoming")
+      ) %>%
+      dplyr::select(
+        Week = week,
+        Date = game_date,
+        Opponent = opponent,
+        Location = location,
+        `Next Opp` = next_opponent,
+        Status = status
+      )
+
+    # Create interactive datatable
+    datatable(
+      display_schedule,
+      selection = 'single',
+      options = list(
+        pageLength = 15,
+        dom = 't',
+        ordering = FALSE
+      ),
+      rownames = FALSE,
+      class = 'cell-border stripe hover'
+    )
+  })
+
+  # Handle schedule row click - auto-fill form
+  observeEvent(input$schedule_table_rows_selected, {
+
+    if (is.null(state$schedule) || length(input$schedule_table_rows_selected) == 0) {
+      return()
+    }
+
+    # Get selected row
+    selected_row <- input$schedule_table_rows_selected
+    game <- state$schedule[selected_row, ]
+
+    # Update form fields
+    updateNumericInput(session, "week_number", value = game$week)
+    updateSelectInput(session, "opponent", selected = game$opponent)
+
+    # Update next opponent if available
+    if (!is.na(game$next_opponent)) {
+      updateSelectInput(session, "next_opponent", selected = game$next_opponent)
+    }
+
+    # Show notification
+    showNotification(
+      paste0("Auto-filled: Week ", game$week, " - ", game$opponent),
+      type = "message",
+      duration = 3
+    )
   })
 
   # ====================================================================
