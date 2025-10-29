@@ -162,36 +162,49 @@ message("  Next Opponent: '", next_name, "'")
 
 # BU Blue
 bu_color <- team_info$color[team_info$school == "Baylor"]
-if (length(bu_color) == 0) {
+if (length(bu_color) == 0 || is.na(bu_color) || bu_color == "") {
   warning("Baylor color not found in team_info - using default")
   bu_color <- "#003015"  # Default Baylor green
 }
 
 # BU Gold
 bu_alt_color <- team_info$alt_color[team_info$school == "Baylor"]
-if (length(bu_alt_color) == 0) bu_alt_color <- "#FFB81C"  # Default Baylor gold
+if (length(bu_alt_color) == 0 || is.na(bu_alt_color) || bu_alt_color == "") {
+  bu_alt_color <- "#FFB81C"  # Default Baylor gold
+}
 
 # Opponent Main Color
 opp_color <- team_info$color[team_info$school == opp_name]
-if (length(opp_color) == 0) {
+if (length(opp_color) == 0 || is.na(opp_color) || opp_color == "") {
   warning("Opponent '", opp_name, "' color not found in team_info - using default")
   opp_color <- "#CC0000"  # Default red if not found
 }
 
 # Opponent Alt Color
 opp_alt_color <- team_info$alt_color[team_info$school == opp_name]
-if (length(opp_alt_color) == 0) opp_alt_color <- "#666666"  # Default gray if not found
+if (length(opp_alt_color) == 0 || is.na(opp_alt_color) || opp_alt_color == "") {
+  opp_alt_color <- "#666666"  # Default gray if not found
+}
 
 # Next Opponent Main Color
 next_color <- team_info$color[team_info$school == next_name]
-if (length(next_color) == 0) {
+if (length(next_color) == 0 || is.na(next_color) || next_color == "") {
   warning("Next opponent '", next_name, "' color not found in team_info - using default")
   next_color <- "#0033CC"  # Default blue if not found
 }
 
 # Next Opponent Alt Color
 next_alt_color <- team_info$alt_color[team_info$school == next_name]
-if (length(next_alt_color) == 0) next_alt_color <- "#888888"  # Default gray if not found
+if (length(next_alt_color) == 0 || is.na(next_alt_color) || next_alt_color == "") {
+  next_alt_color <- "#888888"  # Default gray if not found
+}
+
+# Final verification - ensure all colors are valid single values
+message("Color values set:")
+message("  bu_color: ", bu_color)
+message("  bu_alt_color: ", bu_alt_color)
+message("  opp_color: ", opp_color)
+message("  next_color: ", next_color)
 
 # BU Logo
 bu_logo_url <- team_info$logo[team_info$school == "Baylor"]
