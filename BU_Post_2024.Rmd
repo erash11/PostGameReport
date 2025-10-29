@@ -1,6 +1,6 @@
 ---
-title: "Baylor vs SUM postgame Report"
-subtitle: "41-38 victory over SMU"
+title: "Baylor Postgame Report"
+subtitle: "Automated Report"
 author: "Applied Performance Football Analytics"
 output:
   html_document:
@@ -265,8 +265,16 @@ bu_def_data = bu_data %>%
 ######################## Data from this Week's BU game vs opp_name##########################
 
 # all
-current_game_data = bu_data %>% 
+current_game_data = bu_data %>%
   filter(pos_team == opp_name | def_pos_team == opp_name)
+
+# Extract game information for title
+final_home_score <- max(current_game_data$home_score, na.rm = TRUE)
+final_away_score <- max(current_game_data$away_score, na.rm = TRUE)
+is_baylor_home_game <- current_game_data$home_team[1] == "Baylor"
+baylor_score <- if(is_baylor_home_game) final_home_score else final_away_score
+opponent_score <- if(is_baylor_home_game) final_away_score else final_home_score
+did_baylor_win <- baylor_score > opponent_score
 
 # offense
 current_game_off_data  = current_game_data %>% 
@@ -738,9 +746,15 @@ print(bu_logo, info = FALSE)
 
 ```
 
-<br> <br>
+<br>
 
-#### The following is a football analytics report of the Baylor vs Kansas Game.
+# Baylor vs `r opp_name` Postgame Report
+
+## `r paste0(baylor_score, "-", opponent_score, " ", if(did_baylor_win) "Victory" else "Loss", if(is_baylor_home_game) " (Home)" else " (Away)")`
+
+<br>
+
+#### The following is a football analytics report of the Baylor vs `r opp_name` game.
 
 #### Some Football Analytics terms should be understood before viewing. They are described below:
 
@@ -769,15 +783,23 @@ Data Source: cfbfastR
 win_plot_data <- current_game_data %>%
   filter(!is.na(away_wp_before) & !is.na(home_wp_before))
 
-# Automatically detect if Baylor is home or away
+# Automatically detect winner and show their win probability
 is_baylor_home <- current_game_data$home_team[1] == "Baylor"
-message("Baylor is playing: ", if(is_baylor_home) "HOME" else "AWAY")
+final_home_score_wp <- max(win_plot_data$home_score, na.rm = TRUE)
+final_away_score_wp <- max(win_plot_data$away_score, na.rm = TRUE)
+home_team_won <- final_home_score_wp > final_away_score_wp
 
-# Select the appropriate win probability column
-if (is_baylor_home) {
+message("Home team: ", current_game_data$home_team[1], " (", final_home_score_wp, ")")
+message("Away team: ", current_game_data$away_team[1], " (", final_away_score_wp, ")")
+message("Winner: ", if(home_team_won) "HOME" else "AWAY")
+
+# Select the winning team's win probability column
+if (home_team_won) {
   wp_column <- "home_wp_before"
+  winner_name <- current_game_data$home_team[1]
 } else {
   wp_column <- "away_wp_before"
+  winner_name <- current_game_data$away_team[1]
 }
 
 background_data <- data.frame(xmin = -Inf, xmax = Inf,
@@ -801,9 +823,9 @@ win_plot_data %>%
   geom_smooth(size = 1, color = "black", se = FALSE, method = "loess", span = 0.15) +   # Set geom line
   geom_hline(yintercept = 0.5, color = "grey", linetype = "dashed") +                   # Set horizontal line
 
-  # Position logos appropriately (home team on top)
-  draw_image(bu_logo, x = -61, y = if(is_baylor_home) 0.88 else -0.12, width = 6.67, height = 2) +
-  draw_image(opp_logo, x = -61, y = if(is_baylor_home) -0.12 else 0.88, width = 6.67, height = 2) +
+  # Position logos appropriately (winner on top since chart shows winner's WP)
+  draw_image(bu_logo, x = -61, y = if(winner_name == "Baylor") 0.88 else -0.12, width = 6.67, height = 2) +
+  draw_image(opp_logo, x = -61, y = if(winner_name == "Baylor") -0.12 else 0.88, width = 6.67, height = 2) +
   
   # Use dynamic column name for color scale
   scale_color_manual(labels = setNames("BU", wp_column),                              # Set colors automatically
@@ -819,8 +841,8 @@ win_plot_data %>%
   guides(fill = "none") +                                                             # get rid of legend for background
   labs(x = "Time Remaining (minutes)",                                                # Add labels
     y = "Win Probability",
-    title = paste('Baylor vs', opp_name, 'Win Probability Chart'),
-    subtitle = 'Chances of winning at each point in the game') + 
+    title = paste0(winner_name, "'s Win Probability - Baylor vs ", opp_name),
+    subtitle = paste0('Showing ', winner_name, "'s chances of winning throughout the game")) + 
   theme(plot.title = element_text(size = 14, hjust = 0, face = "bold"))                # Set theme
 
 ```
@@ -1210,9 +1232,9 @@ The scatter plot above shows this game's defensive performance relative to all o
 
 ## *LOOKING AHEAD*
 
-### Week 12: Baylor (7-4) vs Kansas (5-6)
+### Week `r params$week + 1`: Baylor vs `r next_name`
 
-##### *Baylor will take on a red hot Kansas team.*
+##### *Baylor will take on `r next_name` next.*
 
 <br>
 
