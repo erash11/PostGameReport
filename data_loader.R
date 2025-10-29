@@ -163,3 +163,80 @@ get_cache_status <- function(cache_dir = "./cache") {
 
   return(status)
 }
+
+#' Load Baylor's Game Schedule with Caching
+#'
+#' @param season Season year (default: 2025)
+#' @param team Team name (default: "Baylor")
+#' @param force_reload Logical, force reload from API
+#' @param cache_dir Directory for cache files
+#' @return Data frame with game schedule
+load_team_schedule_cached <- function(season = 2025, team = "Baylor", force_reload = FALSE, cache_dir = "./cache") {
+
+  if (!dir.exists(cache_dir)) {
+    dir.create(cache_dir, recursive = TRUE)
+  }
+
+  cache_file <- file.path(cache_dir, paste0("schedule_", team, "_", season, ".rds"))
+
+  # Check if cache exists and is recent (less than 24 hours old)
+  if (file.exists(cache_file) && !force_reload) {
+    file_age <- difftime(Sys.time(), file.info(cache_file)$mtime, units = "hours")
+
+    if (file_age < 24) {
+      message("Loading schedule from cache (", round(file_age, 1), " hours old)...")
+      return(readRDS(cache_file))
+    } else {
+      message("Cache is older than 24 hours, reloading schedule from API...")
+    }
+  }
+
+  # Load from API
+  message("Loading ", team, " schedule for ", season, " from API...")
+
+  tryCatch({
+    # Get all games for the season
+    games <- cfbd_game_info(year = season, team = team)
+
+    if (is.null(games) || nrow(games) == 0) {
+      warning("No games found for ", team, " in ", season)
+      return(data.frame())
+    }
+
+    # Process the schedule data
+    schedule <- games %>%
+      dplyr::mutate(
+        # Determine if Baylor is home or away
+        is_home = (home_team == team),
+        opponent = ifelse(is_home, away_team, home_team),
+        location = ifelse(is_home, "Home", "Away")
+      ) %>%
+      dplyr::select(
+        week,
+        game_date = start_date,
+        opponent,
+        location,
+        home_team,
+        away_team,
+        completed
+      ) %>%
+      dplyr::arrange(week)
+
+    # Add next opponent column
+    schedule <- schedule %>%
+      dplyr::mutate(
+        next_opponent = dplyr::lead(opponent),
+        next_week = dplyr::lead(week)
+      )
+
+    # Save to cache
+    saveRDS(schedule, cache_file)
+    message("Saved ", team, " schedule to cache (", nrow(schedule), " games)")
+
+    return(schedule)
+
+  }, error = function(e) {
+    warning("Failed to load schedule from API: ", e$message)
+    return(data.frame())
+  })
+}
