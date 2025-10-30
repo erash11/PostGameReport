@@ -211,27 +211,37 @@ message("  opp_color: ", opp_color)
 message("  next_color: ", next_color)
 
 # BU Logo
+message("Loading Baylor logo...")
 bu_logo_url <- team_info$logo[team_info$school == "Baylor"]
-if (length(bu_logo_url) == 0 || is.na(bu_logo_url)) {
-  # Use TSU.png as placeholder if available, otherwise create blank
-  if (file.exists("TSU.png")) {
-    bu_logo <- image_read("TSU.png")
-  } else {
-    bu_logo <- image_blank(100, 100, color = "#003015")
-  }
+if (length(bu_logo_url) == 0 || is.na(bu_logo_url) || bu_logo_url == "") {
+  warning("❌ Baylor logo URL not found in team_info - using green placeholder")
+  bu_logo <- image_blank(150, 150, color = "#003015")
 } else {
-  bu_logo <- image_read(bu_logo_url)
+  message("✓ Baylor logo URL: ", bu_logo_url)
+  tryCatch({
+    bu_logo <- image_read(bu_logo_url)
+    message("✓ Baylor logo loaded successfully")
+  }, error = function(e) {
+    warning("❌ Failed to load Baylor logo from URL: ", e$message, " - using placeholder")
+    bu_logo <<- image_blank(150, 150, color = "#003015")
+  })
 }
 
 # Opponent Logo
+message("Loading ", opp_name, " logo...")
 opp_logo_url <- team_info$logo[team_info$school == opp_name]
 if (length(opp_logo_url) == 0 || is.na(opp_logo_url) || opp_logo_url == "") {
-  warning("Opponent logo not found for: ", opp_name, " - using placeholder")
-  # Create a visible placeholder logo with opponent color
+  warning("❌ Opponent logo URL not found for: ", opp_name, " - using colored placeholder")
   opp_logo <- image_blank(150, 150, color = opp_color)
 } else {
-  message("✓ Opponent logo found: ", opp_logo_url)
-  opp_logo <- image_read(opp_logo_url)
+  message("✓ Opponent logo URL: ", opp_logo_url)
+  tryCatch({
+    opp_logo <- image_read(opp_logo_url)
+    message("✓ Opponent logo loaded successfully")
+  }, error = function(e) {
+    warning("❌ Failed to load opponent logo from URL: ", e$message, " - using placeholder")
+    opp_logo <<- image_blank(150, 150, color = opp_color)
+  })
 }
 
 # Next Opponent Logo
@@ -770,38 +780,6 @@ Data Source: cfbfastR
 
 ```{r, results='hide', warning=FALSE, message=FALSE}
 
-# Reload logos for WPA chart to ensure they display correctly
-message("=== Loading logos for WPA chart ===")
-message("Looking for Baylor logo...")
-bu_logo_wp <- team_info$logo[team_info$school == "Baylor"]
-if (length(bu_logo_wp) == 0 || is.na(bu_logo_wp) || bu_logo_wp == "") {
-  warning("❌ Baylor logo not found - using GREEN placeholder")
-  bu_logo_for_wp <- image_blank(150, 150, color = "#003015")
-  message("Created GREEN placeholder for Baylor")
-} else {
-  message("✓ Baylor logo URL: ", bu_logo_wp)
-  bu_logo_for_wp <- image_read(bu_logo_wp)
-  message("✓ Baylor logo loaded successfully (type: ", class(bu_logo_for_wp), ")")
-}
-
-message("Looking for ", opp_name, " logo...")
-opp_logo_wp <- team_info$logo[team_info$school == opp_name]
-if (length(opp_logo_wp) == 0 || is.na(opp_logo_wp) || opp_logo_wp == "") {
-  warning("❌ Opponent logo not found for: ", opp_name, " - using colored placeholder")
-  opp_logo_for_wp <- image_blank(150, 150, color = opp_color)
-  message("Created placeholder with color: ", opp_color)
-} else {
-  message("✓ Opponent logo URL: ", opp_logo_wp)
-  opp_logo_for_wp <- image_read(opp_logo_wp)
-  message("✓ Opponent logo loaded successfully (type: ", class(opp_logo_for_wp), ")")
-}
-
-# Verify both logos are valid before proceeding
-message("Verifying logos before drawing...")
-message("  Baylor logo valid: ", !is.null(bu_logo_for_wp))
-message("  Opponent logo valid: ", !is.null(opp_logo_for_wp))
-message("=== Logos loaded ===")
-
 # Game Win Probability chart
 # Select Baylor vs Opponent
 win_plot_data <- current_game_data %>%
@@ -832,7 +810,7 @@ win_plot_data %>%
 
   gather(team, wpa,-game_mins_rem) %>% # Melt data
   ggplot(aes(x = game_mins_rem, y = wpa, color = team)) +                               # Set aesthetics
-  geom_rect(data = background_data, 
+  geom_rect(data = background_data,
             aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax, fill = fill),       #set background colors
             inherit.aes = FALSE, alpha = 0.5, colour = bu_alt_color) +
   scale_fill_manual(values = alpha(c(bu_alt_color, opp_color), 0.2)) +                  # set background colors
@@ -840,10 +818,10 @@ win_plot_data %>%
   geom_smooth(size = 1, color = "black", se = FALSE, method = "loess", span = 0.15) +   # Set geom line
   geom_hline(yintercept = 0.5, color = "grey", linetype = "dashed") +                   # Set horizontal line
 
-  # Position logos: Baylor always on top, opponent on bottom
-  # Using coordinates that were proven to work: y=0.88 for top, y=-0.12 for bottom
-  draw_image(bu_logo_for_wp, x = -61, y = 0.88, width = 6.67, height = 2) +
-  draw_image(opp_logo_for_wp, x = -61, y = -0.12, width = 6.67, height = 2) +
+  # Position logos: Baylor always on TOP (near 100%), opponent on BOTTOM (near 0%)
+  # Note: bu_logo and opp_logo were loaded earlier in the document
+  draw_image(bu_logo, x = -61, y = 0.88, width = 6.67, height = 2) +
+  draw_image(opp_logo, x = -61, y = -0.12, width = 6.67, height = 2) +
   
   # Use dynamic column name for color scale
   scale_color_manual(labels = setNames("BU", wp_column),                              # Set colors automatically
