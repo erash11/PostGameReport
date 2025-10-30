@@ -849,7 +849,7 @@ NOTE: This chart assumes each team has an equal chance to win the game at the st
 
 **ANALYSIS:**
 
-`r generate_wp_analysis(win_plot_data, opp_name, wp_column)`
+`r generate_wp_analysis(win_plot_data, opp_name, wp_column, current_game_data)`
 
 \pagebreak
 
@@ -1009,7 +1009,7 @@ comp_chart_off %>%
 
 **Analysis:**
 
-`r generate_offense_analysis(current_game_off_agg, bu_season_off_agg, power_four_off_agg)`
+`r generate_offense_analysis(current_game_off_agg, bu_season_off_agg, power_four_off_agg, current_game_off_data)`
 
 <br>
 
@@ -1216,7 +1216,7 @@ comp_chart_def %>%
 
 **Analysis:**
 
-`r generate_defense_analysis(current_game_def_agg, bu_season_def_agg, power_four_def_agg)`
+`r generate_defense_analysis(current_game_def_agg, bu_season_def_agg, power_four_def_agg, current_game_def_data)`
 
 <br>
 
